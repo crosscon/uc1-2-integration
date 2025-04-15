@@ -1,0 +1,42 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "builder: sync",
+            "type": "shell",
+            "command": "${workspaceFolder}/scripts/builder_sync.sh",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "builder: build",
+            "type": "shell",
+            "dependsOn": [
+                "builder: sync"
+            ],
+            "command": "${workspaceFolder}/scripts/builder_build.sh",
+            "problemMatcher": []
+        },
+        {
+            "label": "builder: fetch",
+            "type": "shell",
+            "dependsOn": [
+                "builder: build"
+            ],
+            "command": "${workspaceFolder}/scripts/builder_fetch.sh",
+            "problemMatcher": []
+        },
+        {
+            "label": "rpi: deploy",
+            "type": "shell",
+            "dependsOn": [
+                "builder: fetch"
+            ],
+            "command": "${workspaceFolder}/scripts/rpi_deploy.sh",
+            "problemMatcher": []
+        }
+    ]
+  }
