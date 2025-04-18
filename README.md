@@ -3,6 +3,20 @@
 This is a repository for client/server mtls applications for the CROSSCON
 project.
 
+## References
+
+Reference list:
+* [SSL/TLS Overview](https://www.wolfssl.com/documentation/manuals/wolfssl/appendix04.html)
+* [WolfSSL SSL tutorial](https://www.wolfssl.com/documentation/manuals/wolfssl/chapter11.html)
+* [WolfSSL TLS Examples](https://github.com/wolfSSL/wolfssl-examples/blob/master/tls/README.md)
+
+## Architecture
+
+Following diagram shows mtls architecture.
+
+![MTLS ARCH](https://www.securew2.com/wp-content/uploads/2024/01/Picture1.png)  
+_Source: https://www.securew2.com/blog/mutual-tls-mtls-authentication_
+
 ## Building for Zarhus (Internal only)
 
 This section describes how to build and deploy application for Zarhus. It is

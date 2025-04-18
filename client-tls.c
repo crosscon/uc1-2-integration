@@ -36,7 +36,9 @@
 
 #define DEFAULT_PORT 11111
 
-#define CERT_FILE "/etc/mtls/ca-cert.pem"
+#define CA_FILE     "/etc/mtls/ca-cert.pem"
+#define CERT_FILE   "/etc/mtls/client-cert.pem"
+#define KEY_FILE    "/etc/mtls/client-key.pem"
 
 
 int main(int argc, char** argv)
@@ -50,6 +52,7 @@ int main(int argc, char** argv)
     /* declare wolfSSL objects */
     WOLFSSL_CTX* ctx;
     WOLFSSL*     ssl;
+    WOLFSSL_CIPHER* cipher;
 
 
 
@@ -110,11 +113,39 @@ int main(int argc, char** argv)
         goto socket_cleanup;
     }
 
-    /* Load client certificates into WOLFSSL_CTX */
-    if ((ret = wolfSSL_CTX_load_verify_locations(ctx, CERT_FILE, NULL))
-         != WOLFSSL_SUCCESS) {
+    /* Mutual Authentication */
+    /* Load client certificate into WOLFSSL_CTX */
+    if ((ret = wolfSSL_CTX_use_certificate_file(ctx, CERT_FILE,
+                                    WOLFSSL_FILETYPE_PEM)) != WOLFSSL_SUCCESS) {
         fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
                 CERT_FILE);
+        goto ctx_cleanup;
+    }
+
+    /* Load client key into WOLFSSL_CTX */
+    if ((ret = wolfSSL_CTX_use_PrivateKey_file(ctx, KEY_FILE,
+                                    WOLFSSL_FILETYPE_PEM)) != WOLFSSL_SUCCESS) {
+        fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
+                KEY_FILE);
+        goto ctx_cleanup;
+    }
+
+    /* Load CA certificate into WOLFSSL_CTX for validating peer */
+    if ((ret = wolfSSL_CTX_load_verify_locations(ctx, CA_FILE, NULL))
+         != WOLFSSL_SUCCESS) {
+        fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
+                CA_FILE);
+        goto ctx_cleanup;
+    }
+
+    /* validate peer certificate */
+    wolfSSL_CTX_set_verify(ctx, WOLFSSL_VERIFY_PEER, NULL);
+
+    /* Load client certificates into WOLFSSL_CTX */
+    if ((ret = wolfSSL_CTX_load_verify_locations(ctx, CA_FILE, NULL))
+         != WOLFSSL_SUCCESS) {
+        fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
+                CA_FILE);
         goto ctx_cleanup;
     }
 
@@ -136,6 +167,9 @@ int main(int argc, char** argv)
         fprintf(stderr, "ERROR: failed to connect to wolfSSL\n");
         goto cleanup;
     }
+
+    cipher = wolfSSL_get_current_cipher(ssl);
+    printf("SSL cipher suite is %s\n", wolfSSL_CIPHER_get_name(cipher));
 
     /* Get a message for the server from stdin */
     printf("Message for server: ");

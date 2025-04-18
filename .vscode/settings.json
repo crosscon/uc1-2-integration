@@ -2,5 +2,9 @@
     "files.associations": {
         "*.conf": "bitbake",
         "*.inc": "bitbake"
-    }
+    },
+    "python.autoComplete.extraPaths": [
+        "${workspaceFolder}/sources/poky/bitbake/lib",
+        "${workspaceFolder}/sources/poky/meta/lib"
+    ]
 }

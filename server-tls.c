@@ -36,9 +36,9 @@
 
 #define DEFAULT_PORT 11111
 
-#define CERT_FILE "/etc/mtls/server-cert.pem"
-#define KEY_FILE  "/etc/mtls/server-key.pem"
-
+#define CA_FILE     "/etc/mtls/client-cert.pem"
+#define CERT_FILE   "/etc/mtls/server-cert.pem"
+#define KEY_FILE    "/etc/mtls/server-key.pem"
 
 
 int main()
@@ -107,7 +107,17 @@ int main()
         goto exit;
     }
 
+    /* Load CA certificate into WOLFSSL_CTX for validating peer */
+    if ((ret = wolfSSL_CTX_load_verify_locations(ctx, CA_FILE, NULL))
+         != WOLFSSL_SUCCESS) {
+        fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
+                CA_FILE);
+        goto exit;
+    }
 
+    /* enable mutual authentication */
+    wolfSSL_CTX_set_verify(ctx,
+        WOLFSSL_VERIFY_PEER | WOLFSSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
 
     /* Initialize the server address struct with zeros */
     memset(&servAddr, 0, sizeof(servAddr));
