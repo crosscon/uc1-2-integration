@@ -37,6 +37,12 @@
             ],
             "command": "${workspaceFolder}/scripts/rpi_deploy.sh",
             "problemMatcher": []
+        },
+        {
+            "label": "container: sync",
+            "type": "shell",
+            "command": "${workspaceFolder}/scripts/container_copy_sources.sh",
+            "problemMatcher": []
         }
     ]
   }

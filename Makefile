@@ -1,8 +1,8 @@
 # TLS Examples Makefile
 CC					?= $(CROSS_COMPILE)gcc
-WOLFSSL_INSTALL_DIR = /usr/local
-CFLAGS				= -Wall -I$(WOLFSSL_INSTALL_DIR)/include $(shell pkg-config --cflags wolfssl)
-LIBS				= -L$(WOLFSSL_INSTALL_DIR)/lib -lm $(shell pkg-config --libs wolfssl)
+WOLFSSL_INSTALL_DIR ?= /usr/local
+CFLAGS				+= -Wall -I$(WOLFSSL_INSTALL_DIR)/include
+LIBS				+= -L$(WOLFSSL_INSTALL_DIR)/lib -lm
 LDFLAGS				+= -Wl,--hash-style=gnu
 
 # option variables
