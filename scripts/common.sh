@@ -5,6 +5,7 @@
 ############
 
 export PI_HOST=192.168.10.29
+export CROSSCON_REPO_PATH=/home/$USER/Development/tmp/crosscon-demos
 
 ##############
 # Uneditable #
@@ -12,8 +13,6 @@ export PI_HOST=192.168.10.29
 
 export APP_NAME=mtls
 export BINARIES='*-tls'
-
-export CONTAINER_NAME=crosscon_hv_container
 
 # Unlikely to change
 export BUILDER_USER=builder

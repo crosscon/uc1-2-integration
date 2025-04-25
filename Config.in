@@ -1,6 +1,5 @@
 config BR2_PACKAGE_MTLS
     bool "mtls"
-    select BR2_PACKAGE_WOLFSSL
-    select BR2_PACKAGE_WOLFSSL_ALL
+    depends on BR2_PACKAGE_WOLFSSL
     help
       TLS client/server example app using wolfSSL.

@@ -39,9 +39,9 @@
             "problemMatcher": []
         },
         {
-            "label": "container: sync",
+            "label": "buildroot: sync",
             "type": "shell",
-            "command": "${workspaceFolder}/scripts/container_copy_sources.sh",
+            "command": "${workspaceFolder}/scripts/buildroot_sync.sh",
             "problemMatcher": []
         }
     ]
