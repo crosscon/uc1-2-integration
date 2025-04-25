@@ -3,6 +3,7 @@ CC					?= $(CROSS_COMPILE)gcc
 WOLFSSL_INSTALL_DIR = /usr/local
 CFLAGS				= -Wall -I$(WOLFSSL_INSTALL_DIR)/include $(shell pkg-config --cflags wolfssl)
 LIBS				= -L$(WOLFSSL_INSTALL_DIR)/lib -lm $(shell pkg-config --libs wolfssl)
+LDFLAGS				+= -Wl,--hash-style=gnu
 
 # option variables
 DYN_LIB         = -lwolfssl
@@ -30,7 +31,7 @@ debug: all
 
 # build template
 %: %.c
-	$(CC) -o $@ $(DEPS) $< $(CFLAGS) $(LIBS)
+	$(CC) -o $@ $(DEPS) $< $(CFLAGS) $(LDFLAGS) $(LIBS)
 
 clean:
 	rm -f $(TARGETS)

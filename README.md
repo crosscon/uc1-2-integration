@@ -31,8 +31,9 @@ The build shall be run on
 [builder](https://git.3mdeb.com/3mdeb/nixos_machine_configs). A few things to
 consider:
 * If you don't have access to builder, obtain it first.
-* `kas-container` and `bmap-tools` should be installed by default.
-* on builder, create yourself a working directory. The name should be same as
+* `kas-container` should be installed by default and `bmap-tools` you don't
+need.
+* On builder, create yourself a working directory. The name should be same as
 `$USER` on your development machine.
 
 Build the image with following command.
@@ -83,7 +84,7 @@ repository to builder.
     add `mtls` to `RDEPENDS:${PN}-system`.
 1. Rebuild the image
     ```bash
-    devtool build zarhus-base-image-debug
+    devtool build-image zarhus-base-image-debug
     ```
 1. Flash the image to RPI
 
