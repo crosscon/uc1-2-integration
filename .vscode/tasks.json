@@ -2,9 +2,9 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "builder: sync",
+            "label": "yocto: builder: sync",
             "type": "shell",
-            "command": "${workspaceFolder}/scripts/builder_sync.sh",
+            "command": "${workspaceFolder}/scripts/yocto_builder_sync.sh",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
@@ -12,36 +12,42 @@
             }
         },
         {
-            "label": "builder: build",
+            "label": "yocto: builder: build",
             "type": "shell",
             "dependsOn": [
                 "builder: sync"
             ],
-            "command": "${workspaceFolder}/scripts/builder_build.sh",
+            "command": "${workspaceFolder}/scripts/yocto_builder_build.sh",
             "problemMatcher": []
         },
         {
-            "label": "builder: fetch",
+            "label": "yocto: builder: fetch",
             "type": "shell",
             "dependsOn": [
                 "builder: build"
             ],
-            "command": "${workspaceFolder}/scripts/builder_fetch.sh",
+            "command": "${workspaceFolder}/scripts/yocto_builder_fetch.sh",
             "problemMatcher": []
         },
         {
-            "label": "rpi: deploy",
+            "label": "yocto: rpi: deploy",
             "type": "shell",
             "dependsOn": [
                 "builder: fetch"
             ],
-            "command": "${workspaceFolder}/scripts/rpi_deploy.sh",
+            "command": "${workspaceFolder}/scripts/yocto_rpi_deploy.sh",
             "problemMatcher": []
         },
         {
-            "label": "buildroot: sync",
+            "label": "buildroot: sync sources",
             "type": "shell",
-            "command": "${workspaceFolder}/scripts/buildroot_sync.sh",
+            "command": "${workspaceFolder}/scripts/buildroot_sync_src.sh",
+            "problemMatcher": []
+        },
+        {
+            "label": "buildroot: generate keys",
+            "type": "shell",
+            "command": "${workspaceFolder}/scripts/buildroot_ta_key_gen.sh",
             "problemMatcher": []
         }
     ]

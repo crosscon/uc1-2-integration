@@ -33,6 +33,10 @@
 /* wolfSSL */
 #include <wolfssl/options.h>
 #include <wolfssl/ssl.h>
+#include <wolfssl/wolfcrypt/wc_pkcs11.h>
+
+/* teec */
+#include <tee_client_api.h>
 
 #define DEFAULT_PORT 11111
 

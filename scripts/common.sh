@@ -4,7 +4,11 @@
 # Editable #
 ############
 
-export PI_HOST=192.168.10.29
+# Used for deploying binaries on target when build with yocto
+export PI_HOST=192.168.10.202
+
+# A path to CROSSCON demo repositories.
+# It is used to sync contents of this repository with CROSSCON's buildroot.
 export CROSSCON_REPO_PATH=/home/$USER/Development/tmp/crosscon-demos
 
 ##############

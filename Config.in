@@ -1,5 +1,7 @@
 config BR2_PACKAGE_MTLS
     bool "mtls"
-    depends on BR2_PACKAGE_WOLFSSL
+    # Following "depens" can be probably replaced with "select"
+    # Must be done right not to break any dependencies
+    depends on BR2_PACKAGE_WOLFSSL && BR2_PACKAGE_OPTEE_CLIENT
     help
       TLS client/server example app using wolfSSL.

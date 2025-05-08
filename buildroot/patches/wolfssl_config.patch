@@ -1,11 +1,9 @@
-diff --git a/CROSSCON-Hypervisor-and-TEE-Isolation-Demos/buildroot/package/wolfssl/wolfssl.mk b/tmp/crosscon-demos/buildroot/package/wolfssl/wolfssl.mk
-index cd3acd9411c8..17c06178a6b2 100644
---- a/CROSSCON-Hypervisor-and-TEE-Isolation-Demos/buildroot/package/wolfssl/wolfssl.mk
-+++ b/tmp/crosscon-demos/buildroot/package/wolfssl/wolfssl.mk
-@@ -32,17 +32,15 @@ else
+--- CROSSCON-Hypervisor-and-TEE-Isolation-Demos/buildroot/package/wolfssl/wolfssl.mk	2023-01-18 09:04:16.000000000 +0100
++++ tmp/crosscon-demos/buildroot/package/wolfssl/wolfssl.mk	2025-05-06 15:19:37.695416424 +0200
+@@ -32,17 +32,15 @@
  WOLFSSL_CONF_OPTS += --disable-sslv3
  endif
-
+ 
 -# enable ARMv8 hardware acceleration
 -ifeq ($(BR2_ARM_CPU_ARMV8A),y)
 -WOLFSSL_CONF_OPTS += --enable-armasm
@@ -24,8 +22,8 @@ index cd3acd9411c8..17c06178a6b2 100644
 +# Enable pkcs#11
 +WOLFSSL_CONF_OPTS += --enable-pkcs11
 +
-+# Control ARMv8 HW acceleration manually
++# Controll ARMv8 HW accelleration manually
  WOLFSSL_CONF_OPTS += --disable-armasm
 -endif
-
+ 
  $(eval $(autotools-package))
