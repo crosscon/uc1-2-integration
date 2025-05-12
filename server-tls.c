@@ -1,6 +1,7 @@
 /* server-tls.c
  *
  * Copyright (C) 2006-2020 wolfSSL Inc.
+ * Copyright (C) 2025 3mdeb Sp. z o.o.
  *
  * This file is part of wolfSSL. (formerly known as CyaSSL)
  *
@@ -66,8 +67,6 @@ int main()
     /* Initialize wolfSSL */
     wolfSSL_Init();
 
-
-
     /* Create a socket that uses an internet IPv4 address,
      * Sets the socket to be stream based (TCP),
      * 0 means choose the default protocol. */
@@ -76,8 +75,6 @@ int main()
         ret = -1;
         goto exit;
     }
-
-
 
     /* Create and initialize WOLFSSL_CTX */
 #ifdef USE_TLSV13
@@ -127,8 +124,6 @@ int main()
     servAddr.sin_port        = htons(DEFAULT_PORT); /* on DEFAULT_PORT */
     servAddr.sin_addr.s_addr = INADDR_ANY;          /* from anywhere   */
 
-
-
     /* Bind the server socket to our port */
     if (bind(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
         fprintf(stderr, "ERROR: failed to bind\n");
@@ -142,8 +137,6 @@ int main()
         ret = -1;
         goto exit;
     }
-
-
 
     /* Continue to accept clients until shutdown is issued */
     while (!shutdown) {
@@ -175,7 +168,6 @@ int main()
             goto exit;
         }
 
-
         printf("Client connected successfully\n");
 
         cipher = wolfSSL_get_current_cipher(ssl);
@@ -197,8 +189,6 @@ int main()
             printf("Shutdown command issued!\n");
             shutdown = 1;
         }
-
-
 
         /* Write our reply into buff */
         memset(buff, 0, sizeof(buff));

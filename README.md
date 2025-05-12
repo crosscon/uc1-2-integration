@@ -1,6 +1,6 @@
 # crosscon-uc1-2
 
-This is a repository for client/server mtls applications for the CROSSCON
+This is a repository for client/server mTLS applications for the CROSSCON
 project.
 
 ## References
@@ -9,13 +9,7 @@ Reference list:
 * [SSL/TLS Overview](https://www.wolfssl.com/documentation/manuals/wolfssl/appendix04.html)
 * [WolfSSL SSL tutorial](https://www.wolfssl.com/documentation/manuals/wolfssl/chapter11.html)
 * [WolfSSL TLS Examples](https://github.com/wolfSSL/wolfssl-examples/blob/master/tls/README.md)
-
-## Architecture
-
-Following diagram shows mtls architecture.
-
-![MTLS ARCH](https://www.securew2.com/wp-content/uploads/2024/01/Picture1.png)  
-_Source: https://www.securew2.com/blog/mutual-tls-mtls-authentication_
+* [Up to speed on mtls architecture](https://www.securew2.com/blog/mutual-tls-mtls-authentication)
 
 ## Building for Zarhus (Internal only)
 
@@ -37,12 +31,14 @@ need.
 `$USER` on your development machine.
 
 Build the image with following command.
+
 ```bash
 SHELL=/bin/bash KAS_MACHINE=raspberrypi4-64 kas-container build meta-zarhus/kas/common.yml:meta-zarhus/kas/cache.yml:meta-zarhus/kas/debug.yml:meta-zarhus/kas/rpi.yml
 ```
 
 When done, your project structure should look like this
-```text
+
+```bash
 [builder@builder2:/project-data/<your_user_name>/yocto]$ ls
 build  meta-openembedded  meta-raspberrypi  meta-zarhus  mtls_app  poky
 ```
@@ -61,32 +57,42 @@ set. The RPI deployment machine is likely to change, so edit it accordingly.
 1. Run `scripts/builder_sync.sh` script. This will sync the contents of this
 repository to builder.
 1. On builder start kas-container in shell mode.
+
     ```bash
     KAS_MACHINE=raspberrypi4-64 kas-container \
     --runtime-args "--volume $REMOTE_PROJECT_DIR:/workdir" \
     shell meta-zarhus/kas/common.yml:meta-zarhus/kas/cache.yml:meta-zarhus/kas/debug.yml:meta-zarhus/kas/rpi.yml
     ```
+
     Note: **REMOTE_PROJECT_DIR** value should be taken from `scripts/common.sh`.
-1. Add application to yocto structure
+1. Add application to Yocto structure
+
     ```bash
     devtool add mtls /workdir
     ```
-1. Edit recipe according to `yocto/mtls_git.bb`
+
+1. Copy recipe `yocto/mtls_git.bb` from source files to recipes directory
+
     ```bash
-    devtool modify mtls
+     cp /workdir/yocto/mtls_git.bb /build/workspace/recipes/mtls/mtls_git.bb
     ```
+
 1. Build the application to test the recipe
+
     ```bash
     devtool build mtls
     ```
+
 1. Add the package to zarhus package group. Edit
     `meta-zarhus-distro/recipes-zarhus/packagegroups/packagegroup-zarhus.bb` and
     add `mtls` to `RDEPENDS:${PN}-system`.
 1. Rebuild the image
+
     ```bash
     devtool build-image zarhus-base-image-debug
     ```
-1. Flash the image to RPI
+
+1. [Flash the image to RPI](https://docs.zarhus.com/getting-started/flashing/)
 
 ### Development
 
@@ -96,6 +102,5 @@ Once previous step have been completed. Now you should be able to:
 
 You can run the tasks directly from `vscode`/`vscodium`. The task dependency
 has been configured, so running `rpi: deploy` should also sync source code,
-rebuild the image, fetch artifacts and deploy binaries on a Pi. You can also
+rebuild the image, fetch artifacts and deploy binaries on a RPI. You can also
 run these steps manually by simply calling scripts in `./scripts` directory.
-

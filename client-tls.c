@@ -1,6 +1,7 @@
 /* client-tls.c
  *
  * Copyright (C) 2006-2020 wolfSSL Inc.
+ * Copyright (C) 2025 3mdeb Sp. z o.o.
  *
  * This file is part of wolfSSL. (formerly known as CyaSSL)
  *
@@ -53,8 +54,6 @@ int main(int argc, char** argv)
     WOLFSSL_CTX* ctx;
     WOLFSSL*     ssl;
     WOLFSSL_CIPHER* cipher;
-
-
 
     /* Check for proper calling convention */
     if (argc != 2) {
@@ -140,14 +139,6 @@ int main(int argc, char** argv)
 
     /* validate peer certificate */
     wolfSSL_CTX_set_verify(ctx, WOLFSSL_VERIFY_PEER, NULL);
-
-    /* Load client certificates into WOLFSSL_CTX */
-    if ((ret = wolfSSL_CTX_load_verify_locations(ctx, CA_FILE, NULL))
-         != WOLFSSL_SUCCESS) {
-        fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
-                CA_FILE);
-        goto ctx_cleanup;
-    }
 
     /* Create a WOLFSSL object */
     if ((ssl = wolfSSL_new(ctx)) == NULL) {
