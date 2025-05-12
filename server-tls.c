@@ -173,7 +173,6 @@ int main()
         cipher = wolfSSL_get_current_cipher(ssl);
         printf("SSL cipher suite is %s\n", wolfSSL_CIPHER_get_name(cipher));
 
-
         /* Read the client data into our buff array */
         memset(buff, 0, sizeof(buff));
         if ((ret = wolfSSL_read(ssl, buff, sizeof(buff)-1)) == -1) {

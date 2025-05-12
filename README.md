@@ -104,3 +104,23 @@ You can run the tasks directly from `vscode`/`vscodium`. The task dependency
 has been configured, so running `rpi: deploy` should also sync source code,
 rebuild the image, fetch artifacts and deploy binaries on a RPI. You can also
 run these steps manually by simply calling scripts in `./scripts` directory.
+
+## Usage
+
+The app consists of two binaries `server-tls` and `client-tls`. To test the app
+first run the server as a background process
+
+```bash
+root@raspberrypi4-64:~# server-tls &
+[1] 478
+Waiting for a connection...
+```
+
+Then run the client with the following command:
+
+```bash
+root@raspberrypi4-64:~# client-tls 127.0.0.1
+Client connected successfully
+SSL cipher suite is TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+SSL cipher suite is TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+```

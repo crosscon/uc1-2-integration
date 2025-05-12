@@ -4,8 +4,8 @@
 # this is not accurate with respect to the licensing of the software being built (it
 # will not be in most cases) you must specify the correct value before using this
 # recipe for anything other than initial testing/development!
-LICENSE = "CLOSED"
-LIC_FILES_CHKSUM = ""
+LICENSE = "GPL-2.0-only"
+LIC_FILES_CHKSUM = "file://COPYING;md5=e827ab614886459b7f033a566e2fc042"
 
 SRC_URI = "git://git@git.3mdeb.com:2222/3mdeb/crosscon-uc1-2.git;protocol=ssh;branch=master"
 
