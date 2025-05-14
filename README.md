@@ -9,7 +9,7 @@ Reference list:
 * [SSL/TLS Overview](https://www.wolfssl.com/documentation/manuals/wolfssl/appendix04.html)
 * [WolfSSL SSL tutorial](https://www.wolfssl.com/documentation/manuals/wolfssl/chapter11.html)
 * [WolfSSL TLS Examples](https://github.com/wolfSSL/wolfssl-examples/blob/master/tls/README.md)
-* [Up to speed on mtls architecture](https://www.securew2.com/blog/mutual-tls-mtls-authentication)
+* [Up to speed on mTLS architecture](https://www.securew2.com/blog/mutual-tls-mtls-authentication)
 
 ## Building for Zarhus (Internal only)
 
@@ -108,7 +108,7 @@ run these steps manually by simply calling scripts in `./scripts` directory.
 ## Usage
 
 The app consists of two binaries `server-tls` and `client-tls`. To test the app
-first run the server as a background process
+first run the server as a background process:
 
 ```bash
 root@raspberrypi4-64:~# server-tls &
