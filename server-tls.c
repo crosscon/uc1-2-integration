@@ -38,12 +38,12 @@
 /* teec */
 #include <tee_client_api.h>
 
-#define DEFAULT_PORT 11111
+#define DEFAULT_PORT 12345
 
-#define CA_FILE     "/etc/mtls/client-cert.pem"
-#define CERT_FILE   "/etc/mtls/server-cert.pem"
-#define KEY_FILE    "/etc/mtls/server-key.pem"
-
+#define CA_FILE     "/root/ca-cert.pem"
+#define CERT_FILE   "/root/server-cert.pem"
+#define KEY_FILE    "/root/server-key.pem"
+#define PRIV_KEY_ID  {0x01}
 
 int main()
 {
@@ -57,20 +57,46 @@ int main()
     int                shutdown = 0;
     int                ret;
     const char*        reply = "I hear ya fa shizzle!\n";
+    char               wolfsslErrorStr[80];
+
+    const char* library = "/usr/lib/libckteec.so";
+    const char* tokenName = "ServerToken";
+    const char* userPin = "1234";
+    Pkcs11Dev dev;
+    Pkcs11Token token;
+    int slotId = 0;
+    int devId = 1;
+    unsigned char      privKeyId[] = PRIV_KEY_ID;
 
     /* declare wolfSSL objects */
     WOLFSSL_CTX* ctx = NULL;
     WOLFSSL*     ssl = NULL;
     WOLFSSL_CIPHER* cipher;
 
-#if 0
-    wolfSSL_Debugging_ON();
-#endif
+    wolfCrypt_Init();
+
+    ret = wc_Pkcs11_Initialize(&dev, library, NULL);
+    if (ret != 0) {
+      fprintf(stderr, "Failed to initialize PKCS#11 library\n");
+      return ret;
+    }
+
+    ret = wc_Pkcs11Token_Init(&token, &dev, slotId, tokenName, (byte *)userPin,
+                              strlen(userPin));
+    if (ret != 0) {
+      fprintf(stderr, "Failed to initialize PKCS#11 token\n");
+      return ret;
+    }
+
+    ret = wc_CryptoDev_RegisterDevice(devId, wc_Pkcs11_CryptoDevCb,
+                                              &token);
+    if (ret != 0) {
+      fprintf(stderr, "Failed to register PKCS#11 token\n");
+      return ret;
+    }
 
     /* Initialize wolfSSL */
     wolfSSL_Init();
-
-
 
     /* Create a socket that uses an internet IPv4 address,
      * Sets the socket to be stream based (TCP),
@@ -80,8 +106,6 @@ int main()
         ret = -1;
         goto exit;
     }
-
-
 
     /* Create and initialize WOLFSSL_CTX */
 #ifdef USE_TLSV13
@@ -96,24 +120,30 @@ int main()
     }
 
     /* Load server certificates into WOLFSSL_CTX */
-    if ((ret = wolfSSL_CTX_use_certificate_file(ctx, CERT_FILE, WOLFSSL_FILETYPE_PEM))
-        != WOLFSSL_SUCCESS) {
+    ret = wolfSSL_CTX_use_certificate_file(ctx, CERT_FILE, SSL_FILETYPE_PEM);
+    if (ret != WOLFSSL_SUCCESS) {
         fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
                 CERT_FILE);
+        ret = -1;
+        goto exit;
+    }
+
+    if (wolfSSL_CTX_SetDevId(ctx, devId) != WOLFSSL_SUCCESS) {
+        printf(stderr, "ERROR: failed to create WOLFSSL_CTX\n");
+        ret = -1;
         goto exit;
     }
 
     /* Load server key into WOLFSSL_CTX */
-    if ((ret = wolfSSL_CTX_use_PrivateKey_file(ctx, KEY_FILE, WOLFSSL_FILETYPE_PEM))
-        != WOLFSSL_SUCCESS) {
-        fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
-                KEY_FILE);
+    if (wolfSSL_CTX_use_PrivateKey_Id(ctx, privKeyId, sizeof(privKeyId), devId) != SSL_SUCCESS) {
+        fprintf(stderr, "ERROR: failed to set id.\n");
+        ret = -1;
         goto exit;
     }
 
     /* Load CA certificate into WOLFSSL_CTX for validating peer */
-    if ((ret = wolfSSL_CTX_load_verify_locations(ctx, CA_FILE, NULL))
-         != WOLFSSL_SUCCESS) {
+    ret = wolfSSL_CTX_load_verify_locations(ctx, CA_FILE, NULL);
+    if (ret != WOLFSSL_SUCCESS) {
         fprintf(stderr, "ERROR: failed to load %s, please check the file.\n",
                 CA_FILE);
         goto exit;
@@ -162,6 +192,13 @@ int main()
         }
 
         /* Create a WOLFSSL object */
+      ret = wc_Pkcs11Token_Open(&token, 1);
+        if (ret != 0) {
+            fprintf(stderr, "ERROR: failed to open session on token (%d)\n",
+                ret);
+           goto exit;
+        }
+        /* Create a WOLFSSL object */
         if ((ssl = wolfSSL_new(ctx)) == NULL) {
             fprintf(stderr, "ERROR: failed to create WOLFSSL object\n");
             ret = -1;
@@ -173,9 +210,10 @@ int main()
 
         /* Establish TLS connection */
         ret = wolfSSL_accept(ssl);
+        printf("Server accept status: %d\n", ret);
         if (ret != WOLFSSL_SUCCESS) {
-            fprintf(stderr, "wolfSSL_accept error = %d\n",
-                wolfSSL_get_error(ssl, ret));
+            wolfSSL_ERR_error_string(wolfSSL_get_error(ssl, ret), wolfsslErrorStr);
+            fprintf(stderr, "wolfSSL_accept error: %s\n", wolfsslErrorStr);
             goto exit;
         }
 
@@ -188,7 +226,8 @@ int main()
 
         /* Read the client data into our buff array */
         memset(buff, 0, sizeof(buff));
-        if ((ret = wolfSSL_read(ssl, buff, sizeof(buff)-1)) == -1) {
+        ret = wolfSSL_read(ssl, buff, sizeof(buff) - 1);
+        if (ret == -1) {
             fprintf(stderr, "ERROR: failed to read\n");
             goto exit;
         }
@@ -202,15 +241,14 @@ int main()
             shutdown = 1;
         }
 
-
-
         /* Write our reply into buff */
         memset(buff, 0, sizeof(buff));
         memcpy(buff, reply, strlen(reply));
         len = strnlen(buff, sizeof(buff));
 
         /* Reply back to the client */
-        if ((ret = wolfSSL_write(ssl, buff, len)) != len) {
+        ret = wolfSSL_write(ssl, buff, len);
+        if (ret != len) {
             fprintf(stderr, "ERROR: failed to write\n");
             goto exit;
         }
@@ -222,10 +260,13 @@ int main()
         /* Cleanup after this connection */
         wolfSSL_free(ssl);      /* Free the wolfSSL object              */
         ssl = NULL;
+        wc_Pkcs11Token_Close(&token);
         close(connd);           /* Close the connection to the client   */
     }
 
     ret = 0;
+    wc_Pkcs11Token_Final(&token);
+    wc_Pkcs11_Finalize(&dev);
 
 exit:
     /* Cleanup and return */
@@ -238,6 +279,6 @@ exit:
     if (ctx)
         wolfSSL_CTX_free(ctx);  /* Free the wolfSSL context object          */
     wolfSSL_Cleanup();          /* Cleanup the wolfSSL environment          */
-
+    wolfCrypt_Cleanup();
     return ret;               /* Return reporting a success               */
 }
