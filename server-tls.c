@@ -35,6 +35,8 @@
 #include <wolfssl/options.h>
 #include <wolfssl/ssl.h>
 
+#include "include/log.h"
+
 #define DEFAULT_PORT 11111
 
 #define CA_FILE     "/etc/mtls/client-cert.pem"
@@ -54,6 +56,11 @@ int main()
     int                shutdown = 0;
     int                ret;
     const char*        reply = "I hear ya fa shizzle!\n";
+    char               wolfsslErrorStr[80];
+#ifdef DEBUG
+    char               *client_ip;
+    int                client_port;
+#endif /* DEBUG */
 
     /* declare wolfSSL objects */
     WOLFSSL_CTX* ctx = NULL;
@@ -78,8 +85,10 @@ int main()
 
     /* Create and initialize WOLFSSL_CTX */
 #ifdef USE_TLSV13
+    LOG_DBG("Using TLS v1.3\n");
     ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method());
 #else
+    LOG_DBG("using TLS v1.2\n");
     ctx = wolfSSL_CTX_new(wolfTLSv1_2_server_method());
 #endif
     if (ctx == NULL) {
@@ -150,6 +159,12 @@ int main()
             goto exit;
         }
 
+#ifdef DEBUG
+        client_ip = inet_ntoa(clientAddr.sin_addr);
+        client_port = ntohs(clientAddr.sin_port);
+        LOG_DBG("Connection accepted from %s:%d\n", client_ip, client_port);
+#endif /* DEBUG */
+
         /* Create a WOLFSSL object */
         if ((ssl = wolfSSL_new(ctx)) == NULL) {
             fprintf(stderr, "ERROR: failed to create WOLFSSL object\n");
@@ -163,8 +178,8 @@ int main()
         /* Establish TLS connection */
         ret = wolfSSL_accept(ssl);
         if (ret != WOLFSSL_SUCCESS) {
-            fprintf(stderr, "wolfSSL_accept error = %d\n",
-                wolfSSL_get_error(ssl, ret));
+            wolfSSL_ERR_error_string(wolfSSL_get_error(ssl, ret), wolfsslErrorStr);
+            fprintf(stderr, "wolfSSL_accept error: %s\n", wolfsslErrorStr);
             goto exit;
         }
 
