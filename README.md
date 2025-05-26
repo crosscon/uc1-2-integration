@@ -165,11 +165,10 @@ Crosscon.
 ##### Patch buildroot configuration
 
 For the app to work, additional buildroot components need to be enabled, this
-is the role for this step. There are **2 ways** of doing this quickly:
-1. Copy `buildroot/config/crosscon-buildroot.config` to
+is the role for this step.
+
+Copy `buildroot/config/crosscon-buildroot.config` to
 `<crosscon_demos>/buildroot/build-aarch64/.config`
-2. Apply `buildroot/patches/mtls_buildroot_config.patch` to the buildroot
-configuration file `<crosscon_demos>/buildroot/build-aarch64/.config`.
 
 Note that the config might change in the future, so check for differences first.
 
