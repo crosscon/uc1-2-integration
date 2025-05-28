@@ -61,7 +61,7 @@ int main(int argc, char** argv)
     const char* userPin = "1234";
     Pkcs11Dev dev;
     Pkcs11Token token;
-    int slotId = 1;
+    int slotId = 0;
     int devId = 1;
 
     /* Check for proper calling convention */
