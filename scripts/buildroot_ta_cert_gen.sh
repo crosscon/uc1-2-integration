@@ -5,6 +5,7 @@ set -e
 source "$(dirname "$0")/common.sh"
 
 scp ./certs/cert.conf $PI:~
+DATE_STRING=$(date +"%m%d%H%M%Y")
 echo "# Generating CSRs"
 ssh "$PI" sh -i<<EOF
 export PKCS11_MODULE_PATH=/usr/lib/libckteec.so
@@ -14,6 +15,7 @@ openssl req -engine pkcs11 -keyform engine \
 openssl req -engine pkcs11 -keyform engine \
   -key "pkcs11:token=ClientToken;object=ClientKey;type=private;pin-value=1234" \
   -new -config ~/cert.conf -out ~/client-csr.pem 
+date $DATE_STRING
 EOF
 scp $PI:~/server-csr.pem $PI:~/client-csr.pem ./artifacts/certs
 
