@@ -233,13 +233,6 @@ fatload mmc 0 0x200000 crossconhyp.bin; go 0x200000
 
 ##### Test if apps are working
 
-First step is to set up the date, as it defaults to 1970 which makes the
-certificates for MTLS "expired". The below command will set date to
-`Mon May  5 05:05:00 UTC 2025`.
-
-```bash
-date 050505052025
-```
 Run the server binary in the background.
 
 ```bash
@@ -277,6 +270,9 @@ Shutdown complete
 This part describes how to generate key pair using PKCS#11 TA as secure storage.
 This works only if app was built on buildroot (not for Zarhus).
 
+**Note: The keys and certificates will be stored in initramfs and will disappear
+after shutdown. The following steps need to be performed after each boot.**
+
 ### Generate key pair
 
 First step is to request IP via dhcp on pi target. If you've got issues running
@@ -296,3 +292,14 @@ export PI_HOST=192.168.10.29
 Last step is to either run `buildroot: generate keys` vs-code task, or simply
 execute `scripts/buildroot_ta_key_gen.sh` script. The public key will be fetched
 to `artifacts/certs/` directory.
+
+### Generate certificates
+
+Then, you should generate certificates for the server and client. Certificate
+Signing Requests (CSRs) are generated using OpenSSL with PKCS#11. In this setup,
+the host machine serves as the CA for targets (RPis). The CSRs are transferred
+to the host and used for generating certificates using the CA certificate
+located in `certs/ca-cert.pem`.
+
+To generate them, use `scripts/buildroot_ta_cert_gen`. The script will also set
+the current date on the device, because it defaults to 1970.
