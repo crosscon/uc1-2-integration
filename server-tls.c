@@ -55,7 +55,7 @@ int main()
     size_t             len;
     int                shutdown = 0;
     int                ret;
-    const char*        reply = "I hear ya fa shizzle!\n";
+    const char*        reply = "Hello from WolfSSL TLS server!\n";
     char               wolfsslErrorStr[80];
 #ifdef DEBUG
     char               *client_ip;
