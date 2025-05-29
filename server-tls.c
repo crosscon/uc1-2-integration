@@ -101,7 +101,8 @@ int main()
     /* Create a socket that uses an internet IPv4 address,
      * Sets the socket to be stream based (TCP),
      * 0 means choose the default protocol. */
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd == -1) {
         fprintf(stderr, "ERROR: failed to create the socket\n");
         ret = -1;
         goto exit;
@@ -184,22 +185,24 @@ int main()
         printf("Waiting for a connection...\n");
 
         /* Accept client connections */
-        if ((connd = accept(sockfd, (struct sockaddr*)&clientAddr, &size))
-            == -1) {
+        connd = accept(sockfd, (struct sockaddr*)&clientAddr, &size);
+        if (connd == -1) {
             fprintf(stderr, "ERROR: failed to accept the connection\n\n");
             ret = -1;
             goto exit;
         }
 
         /* Create a WOLFSSL object */
-      ret = wc_Pkcs11Token_Open(&token, 1);
+        ret = wc_Pkcs11Token_Open(&token, 1);
         if (ret != 0) {
             fprintf(stderr, "ERROR: failed to open session on token (%d)\n",
                 ret);
            goto exit;
         }
+
         /* Create a WOLFSSL object */
-        if ((ssl = wolfSSL_new(ctx)) == NULL) {
+        ssl = wolfSSL_new(ctx);
+        if (ssl == NULL) {
             fprintf(stderr, "ERROR: failed to create WOLFSSL object\n");
             ret = -1;
             goto exit;
@@ -265,6 +268,7 @@ int main()
     }
 
     ret = 0;
+    wc_Pkcs11Token_Close(&token);
     wc_Pkcs11Token_Final(&token);
     wc_Pkcs11_Finalize(&dev);
 

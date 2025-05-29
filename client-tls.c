@@ -192,7 +192,8 @@ int main(int argc, char** argv)
     }
 
     /* Create a WOLFSSL object */
-    if ((ssl = wolfSSL_new(ctx)) == NULL) {
+    ssl = wolfSSL_new(ctx);
+    if (ssl == NULL) {
         fprintf(stderr, "ERROR: failed to create WOLFSSL object\n");
         ret = -1;
         goto ctx_cleanup;
@@ -254,6 +255,8 @@ int main(int argc, char** argv)
     ret = 0;
 
     /* Cleanup and return */
+    // FIXME: Segmentation fault
+    wc_Pkcs11Token_Close(&token);
     wc_Pkcs11Token_Final(&token);
     wc_Pkcs11_Finalize(&dev);
 
