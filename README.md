@@ -201,7 +201,7 @@ copied to SD card.
 
 #### Testing
 
-To test if the apps work, you must now boot up the RPI with built image.
+To test if the apps work, you must now boot up 2 RPis with built image.
 
 ##### Booting up
 
@@ -231,39 +231,54 @@ Boot the image by manually loading it into the memory and "jumping" to it.
 fatload mmc 0 0x200000 crossconhyp.bin; go 0x200000
 ```
 
+Perform the same steps for the second RPi.
+
 ##### Test if apps are working
 
-Run the server binary in the background.
+Run the server binary in the background on one of the platforms.
 
 ```bash
 server-tls &
 ```
 
-Run the client binary.
+Run the client binary on another platform.
 
 ```bash
-client-tls 127.0.0.1
+client-tls <SERVER_IP>
 ```
 
-Expected result.
+Replace `<SERVER_IP>` with the IP address of your server RPi.
+
+Expected result:
+
+Server:
 
 ```text
 # server-tls &
 # Waiting for a connection...
-# client-tls 127.0.0.1
+Server accept status: 1
 Client connected successfully
-SSL cipher suite is TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-SSL cipher suite is TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-Message for server: All your base are belong to us
-Client: All your base are belong to us
+SSL cipher suite is ECDHE-ECDSA-AES256-GCM-SHA384
+Client: hello
 
 Shutdown complete
 Waiting for a connection...
+```
+
+Client:
+
+```text
+# client-tls <SERVER_IP>
+SSL cipher suite is ECDHE-ECDSA-AES256-GCM-SHA384
+Message for server: hello
 Server: I hear ya fa shizzle!
 
 Shutdown not complete
 Shutdown complete
 ```
+
+Do not worry if the client prints `Segmentation fault` at the end. This is a
+known issue, which does not affect the process.
 
 ## Generating key pairs (buildroot only)
 
@@ -275,19 +290,26 @@ after shutdown. The following steps need to be performed after each boot.**
 
 ### Generate key pair
 
-First step is to request IP via dhcp on pi target. If you've got issues running
-this command [check if you've got ethernet support enabled](#prerequisites).
+First step is to request IP via DHCP on both targets. If you've got issues
+running this command
+[check if you've got ethernet support enabled](#prerequisites).
 
 ```bash
 udhcpc -i eth0
 ```
 
-Second step is to update `PI_HOST` in `scripts/common.sh`.
+Second step is to update `PI_SERVER_HOST` and `PI_CLIENT_HOST` in
+`scripts/common.sh`. Choose one of the platforms to be the server and the other
+one to be the client.
+
 ```bash
 [...]
-export PI_HOST=192.168.10.29
+export PI_SERVER_HOST=192.168.10.29
+export PI_CLIENT_HOST=192.168.10.30
 [...]
 ```
+
+Replace the values with the output of `udhcpc -i eth0` for each platform.
 
 Last step is to either run `buildroot: generate keys` vs-code task, or simply
 execute `scripts/buildroot_ta_key_gen.sh` script. The public key will be fetched
@@ -302,4 +324,4 @@ to the host and used for generating certificates using the CA certificate
 located in `certs/ca-cert.pem`.
 
 To generate them, use `scripts/buildroot_ta_cert_gen`. The script will also set
-the current date on the device, because it defaults to 1970.
+the current date on the devices, because it defaults to 1970.
