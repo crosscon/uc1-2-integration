@@ -2,8 +2,8 @@
 
 set -e
 
-CERT_DIR="./certs"
-OUTPUT_DIR="./artifacts/certs"
+CERT_DIR="./certs/ecc"
+OUTPUT_DIR="./artifacts/certs/ecc"
 mkdir -p "$OUTPUT_DIR"
 
 # List of input PEM files

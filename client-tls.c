@@ -37,9 +37,9 @@
 
 #define DEFAULT_PORT 11111
 
-#define CA_FILE     "/etc/mtls/ca-cert.pem"
-#define CERT_FILE   "/etc/mtls/client-cert.pem"
-#define KEY_FILE    "/etc/mtls/client-key.pem"
+#define CA_FILE     "./certs/ecc/ca-cert.pem"
+#define CERT_FILE   "./certs/ecc/client-cert.pem"
+#define KEY_FILE    "./certs/ecc/client-key.pem"
 
 
 int main(int argc, char** argv)
