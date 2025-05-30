@@ -17,7 +17,7 @@ pkcs11-tool --module /usr/lib/libckteec.so --slot 0 --login --so-pin 1234 --init
 # Generate key pair
 pkcs11-tool --module /usr/lib/libckteec.so \
   --slot 0 --login --pin 1234 \
-  --keypairgen --key-type rsa:2048 \
+  --keypairgen --key-type EC:prime256v1 \
   --label "ServerKey" --id 01
 # Export pubkey
 pkcs11-tool --module /usr/lib/libckteec.so \
@@ -34,7 +34,7 @@ pkcs11-tool --module /usr/lib/libckteec.so --slot 1 --login --so-pin 1234 --init
 # Generate key pair
 pkcs11-tool --module /usr/lib/libckteec.so \
   --slot 1 --login --pin 1234 \
-  --keypairgen --key-type rsa:2048 \
+  --keypairgen --key-type EC:prime256v1 \
   --label "ClientKey" --id 01
 # Export pubkey
 pkcs11-tool --module /usr/lib/libckteec.so \
