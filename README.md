@@ -235,10 +235,10 @@ Perform the same steps for the second RPi.
 
 ##### Test if apps are working
 
-Run the server binary in the background on one of the platforms.
+Run the server binary on one of the platforms.
 
 ```bash
-server-tls &
+server-tls
 ```
 
 Run the client binary on another platform.
