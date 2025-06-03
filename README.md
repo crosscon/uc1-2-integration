@@ -11,6 +11,35 @@ Reference list:
 * [WolfSSL TLS Examples](https://github.com/wolfSSL/wolfssl-examples/blob/master/tls/README.md)
 * [Up to speed on mTLS architecture](https://www.securew2.com/blog/mutual-tls-mtls-authentication)
 
+## Building for PC (Fedora)
+
+Here are the steps for building `mtls` for PC (eg. Fedora).
+
+1. Install wolfssl
+    ```bash
+    dir=$(pwd)
+    sudo dnf install -y autoconf automake libtool
+    cd ~/Downloads
+    git clone https://github.com/wolfSSL/wolfssl.git
+    cd wolfssl
+    ./autogen.sh
+    ./configure
+    make
+    sudo make install
+    cd $dir
+    ```
+1. Add wolfssl to dynamic linker config
+    ```bash
+    echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/wolfssl.conf
+    sudo ldconfig
+    ```
+1. Build and install `mtls`
+    ```bash
+    export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+    make
+    make install # Necessary to install certificates in valid directory.
+    ```
+
 ## Building for Zarhus (Internal only)
 
 This section describes how to build and deploy application for Zarhus. It is
