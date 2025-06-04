@@ -1,7 +1,7 @@
 # TLS Examples Makefile
 CC					?= $(CROSS_COMPILE)gcc
 WOLFSSL_INSTALL_DIR = /usr/local
-CFLAGS				= -Wall -I$(WOLFSSL_INSTALL_DIR)/include $(shell pkg-config --cflags wolfssl)
+CFLAGS				+= -Wall -I$(WOLFSSL_INSTALL_DIR)/include $(shell pkg-config --cflags wolfssl)
 LIBS				= -L$(WOLFSSL_INSTALL_DIR)/lib -lm $(shell pkg-config --libs wolfssl)
 LDFLAGS				+= -Wl,--hash-style=gnu
 
@@ -16,6 +16,10 @@ DEPS            =
 #CFLAGS+=$(OPTIMIZE)
 #LIBS+=$(STATIC_LIB)
 LIBS+=$(DYN_LIB)
+
+ifeq ($(USE_ECC_CERTS),1)
+CFLAGS += -DUSE_ECC_CERTS
+endif
 
 # build targets
 TARGETS = client-tls server-tls
@@ -41,4 +45,4 @@ install: $(TARGETS)
 	install -d $(DESTDIR)/usr/bin
 	install -m 0755 $(TARGETS) $(DESTDIR)/usr/bin/
 	install -d $(DESTDIR)/etc/mtls
-	install -m 0644 certs/* $(DESTDIR)/etc/mtls/
+	cp -a certs/. $(DESTDIR)/etc/mtls/

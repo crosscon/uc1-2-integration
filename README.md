@@ -11,6 +11,23 @@ Reference list:
 * [WolfSSL TLS Examples](https://github.com/wolfSSL/wolfssl-examples/blob/master/tls/README.md)
 * [Up to speed on mTLS architecture](https://www.securew2.com/blog/mutual-tls-mtls-authentication)
 
+## Build options
+
+Here are the build targets:
+
+* `make` - build default configuration.
+* `make debug` - builds default configuration with debug logs enabled.
+* `make install` - installs binaries and certificates onto the system.
+* `make clean` - removes temporary local files.
+
+### Additional options
+
+Here's the list of additional options. These shall be passed with `make` command
+to take effect:
+
+* `USE_ECC_CERTS=1` - Uses ECC certificates. This option is required to connect
+from NXP platform.
+
 ## Building for PC (Fedora)
 
 Here are the steps for building `mtls` for PC (eg. Fedora).
@@ -37,7 +54,7 @@ Here are the steps for building `mtls` for PC (eg. Fedora).
     ```bash
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
     make
-    make install # Necessary to install certificates in valid directory.
+    sudo make install # Necessary to install certificates in valid directory.
     ```
 
 ## Building for Zarhus (Internal only)

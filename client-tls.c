@@ -37,9 +37,15 @@
 
 #define DEFAULT_PORT 11111
 
-#define CA_FILE     "./certs/ecc/ca-cert.pem"
-#define CERT_FILE   "./certs/ecc/client-cert.pem"
-#define KEY_FILE    "./certs/ecc/client-key.pem"
+#ifdef USE_ECC_CERTS
+  #define CA_FILE     "/etc/mtls/ecc/ca-cert.pem"
+  #define CERT_FILE   "/etc/mtls/ecc/client-cert.pem"
+  #define KEY_FILE    "/etc/mtls/ecc/client-key.pem"
+#else
+  #define CA_FILE     "/etc/mtls/ca-cert.pem"
+  #define CERT_FILE   "/etc/mtls/client-cert.pem"
+  #define KEY_FILE    "/etc/mtls/client-key.pem"
+#endif
 
 
 int main(int argc, char** argv)
