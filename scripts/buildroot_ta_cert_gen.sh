@@ -37,7 +37,7 @@ echo "# Generating client cerificate"
 openssl pkey -pubin -inform DER -in ./artifacts/certs/client-pubkey.der -out ./artifacts/certs/client-pubkey.pem
 openssl x509 -req -days 365 -in ./artifacts/certs/client-csr.pem -CA ./certs/ca-cert.pem -CAkey ./certs/ca-key.pem -CAcreateserial -out ./artifacts/certs/client-cert.pem -extfile ./certs/cert.conf -extensions req_ext
 
-scp ./artifacts/certs/server-cert.pem "$PI_SERVER":~ 
+scp ./artifacts/certs/server-cert.pem "$PI_SERVER":~
 scp ./artifacts/certs/client-cert.pem "$PI_CLIENT":~
 scp ./certs/ca-cert.pem "$PI_SERVER":~
 scp ./certs/ca-cert.pem "$PI_CLIENT":~
