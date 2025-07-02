@@ -39,5 +39,3 @@ clean:
 install: $(TARGETS)
 	install -d $(DESTDIR)/usr/bin
 	install -m 0755 $(TARGETS) $(DESTDIR)/usr/bin/
-	install -d $(DESTDIR)/etc/mtls
-	install -m 0644 certs/* $(DESTDIR)/etc/mtls/

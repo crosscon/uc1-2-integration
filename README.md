@@ -129,17 +129,8 @@ so it is embedded into built OS image.
 
 ### Prerequisites
 
-**FIX ME - LINKS ARE BRANCHES UNDER REVIEW, FIX LINK WHEN MERGED**
-
 To build the app embedded into system you must first
-[build and run Crosscon demos for RPI](https://github.com/3mdeb/CROSSCON-Hypervisor-and-TEE-Isolation-Demos/tree/crscn-rpi4ws-build/env).
-
-**FIX ME - WHEN FIX IS MERGED AND FORK SYNCED, THIS CAN BE REMOVED**
-
-**Warning!** Make sure the main repository
-(CROSSCON-Hypervisor-and-TEE-Isolation-Demos) contains
-[a fix for ethernet connection support](https://github.com/crosscon/CROSSCON-Hypervisor-and-TEE-Isolation-Demos/pull/10). If not, you can apply
-`patches/enable_eth.patch` on default branch.
+[build and run Crosscon demos for RPI](https://github.com/3mdeb/CROSSCON-Hypervisor-and-TEE-Isolation-Demos/blob/master/env/README.md).
 
 ### Building the image
 
@@ -159,8 +150,8 @@ automatically when saving.
 #### Patch buildroot components
 
 Several buildroot components must be patched for solution to work properly. This
-unfortunately be a single simple patch, as the buildroot is not tracked by
-Crosscon.
+unfortunately cannot be a single simple patch, as the buildroot is not tracked
+by Crosscon.
 
 ##### Patch buildroot configuration
 
@@ -183,6 +174,10 @@ configuration.
 A file that needs to be patched is
 `<crosscon_demos>/buildroot/package/wolfssl/wolfssl.mk`.
 
+```bash
+patch <crosscon_demos>/buildroot/package/wolfssl/wolfssl.mk < buildroot/patches/wolfssl_config.patch
+```
+
 ##### Patch opensc (pkcs11-tool)
 
 The `opensc` needs to be patched for generating public keys with `pkcs#11-tool`.
@@ -191,17 +186,24 @@ Use `buildroot/patches/opensc.patch` to patch `opensc` build configuration.
 A file that needs to be patched is
 `<crosscon_demos>/buildroot/package/opensc/opensc.mk`.
 
+```bash
+patch <crosscon_demos>/buildroot/package/opensc/opensc.mk < buildroot/patches/opensc.patch
+```
+
 #### Building
 
-**FIX ME - ADD STEP SELECTION TO THE SCRIPT**
+To build the "OS" with the applications embedded in the system,
+**the steps 8 to 10 from `build_rpi4.sh`** need to be rerun, and the
+files must be then copied to SD card.
 
-To build the "OS" with the applications embedded in the system, the steps
-7 to 9 from `build_rpi4-ws_demo.sh` need to be rerun, and the files must be then
-copied to SD card.
+```bash
+# Run the following inside the container
+env/build_rpi4.sh --steps=8-10
+```
 
 #### Testing
 
-To test if the apps work, you must now boot up the RPI with built image.
+To test if the apps work, you must now boot up 2 RPis with built image.
 
 ##### Booting up
 
@@ -231,41 +233,9 @@ Boot the image by manually loading it into the memory and "jumping" to it.
 fatload mmc 0 0x200000 crossconhyp.bin; go 0x200000
 ```
 
-##### Test if apps are working
+Perform the same steps for the second RPi.
 
-Run the server binary in the background.
-
-```bash
-server-tls &
-```
-
-Run the client binary.
-
-```bash
-client-tls 127.0.0.1
-```
-
-Expected result.
-
-```text
-# server-tls &
-# Waiting for a connection...
-# client-tls 127.0.0.1
-Client connected successfully
-SSL cipher suite is TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-SSL cipher suite is TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-Message for server: All your base are belong to us
-Client: All your base are belong to us
-
-Shutdown complete
-Waiting for a connection...
-Server: I hear ya fa shizzle!
-
-Shutdown not complete
-Shutdown complete
-```
-
-## Generating key pairs (buildroot only)
+##### Generating key pairs (buildroot only)
 
 This part describes how to generate key pair using PKCS#11 TA as secure storage.
 This works only if app was built on buildroot (not for Zarhus).
@@ -273,27 +243,31 @@ This works only if app was built on buildroot (not for Zarhus).
 **Note: The keys and certificates will be stored in initramfs and will disappear
 after shutdown. The following steps need to be performed after each boot.**
 
-### Generate key pair
+##### Generate key pair
 
-First step is to request IP via dhcp on pi target. If you've got issues running
-this command [check if you've got ethernet support enabled](#prerequisites).
-
+First step is to request IP via DHCP on both targets.
 ```bash
 udhcpc -i eth0
 ```
 
-Second step is to update `PI_HOST` in `scripts/common.sh`.
+Second step is to update `PI_SERVER_HOST` and `PI_CLIENT_HOST` in
+`scripts/common.sh`. Choose one of the platforms to be the server and the other
+one to be the client.
+
 ```bash
 [...]
-export PI_HOST=192.168.10.29
+export PI_SERVER_HOST=192.168.10.29
+export PI_CLIENT_HOST=192.168.10.30
 [...]
 ```
 
-Last step is to either run `buildroot: generate keys` vs-code task, or simply
-execute `scripts/buildroot_ta_key_gen.sh` script. The public key will be fetched
-to `artifacts/certs/` directory.
+Replace the values with the output of `udhcpc -i eth0` for each platform.
 
-### Generate certificates
+Run `buildroot: generate keys` vs-code task, or simply execute
+`scripts/buildroot_ta_key_gen.sh` script. The public key will be fetched to
+`artifacts/certs/` directory.
+
+##### Generate certificates
 
 Then, you should generate certificates for the server and client. Certificate
 Signing Requests (CSRs) are generated using OpenSSL with PKCS#11. In this setup,
@@ -301,5 +275,53 @@ the host machine serves as the CA for targets (RPis). The CSRs are transferred
 to the host and used for generating certificates using the CA certificate
 located in `certs/ca-cert.pem`.
 
-To generate them, use `scripts/buildroot_ta_cert_gen`. The script will also set
-the current date on the device, because it defaults to 1970.
+To generate them, either run `buildroot: generate certs` vs-code task or use
+`scripts/buildroot_ta_cert_gen.sh`. The script will also set the date on target
+devices, because it defaults to 1970 and messes with certificate validity.
+
+##### Test if apps are working
+
+Run the server binary on one of the platforms.
+
+```bash
+server-tls
+```
+
+Run the client binary on another platform.
+
+```bash
+client-tls <SERVER_IP>
+```
+
+Replace `<SERVER_IP>` with the IP address of your server RPi.
+
+Expected result:
+
+Server:
+
+```text
+# server-tls &
+# Waiting for a connection...
+Server accept status: 1
+Client connected successfully
+SSL cipher suite is ECDHE-ECDSA-AES256-GCM-SHA384
+Client: hello
+
+Shutdown complete
+Waiting for a connection...
+```
+
+Client:
+
+```text
+# client-tls <SERVER_IP>
+SSL cipher suite is ECDHE-ECDSA-AES256-GCM-SHA384
+Message for server: hello
+Server: I hear ya fa shizzle!
+
+Shutdown not complete
+Shutdown complete
+```
+
+Do not worry if the client prints `Segmentation fault` at the end. This is a
+known issue, which does not affect the process.
