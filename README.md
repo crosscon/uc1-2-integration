@@ -54,7 +54,7 @@ Here's how to build image.
 
 #### Sync buildroot
 
-Update `CROSSCON_REPO_PATH` in `scripts/common.sh` with the path to the cloned
+Update `CROSSCON_REPO_PATH` in `scripts/settings.sh` with the path to the cloned
 `CROSSCON-Hypervisor-and-TEE-Isolation-Demos` repository.
 
 Next, execute `buildroot: sync` vs-code task, or `scripts/buildroot_sync.sh`
@@ -167,8 +167,8 @@ udhcpc -i eth0
 ```
 
 Second step is to update `PI_SERVER_HOST` and `PI_CLIENT_HOST` in
-`scripts/common.sh`. Choose one of the platforms to be the server and the other
-one to be the client.
+`scripts/settings.sh`. Choose one of the platforms to be the server and the
+other one to be the client.
 
 ```bash
 [...]
