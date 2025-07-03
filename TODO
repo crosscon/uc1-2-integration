@@ -1,6 +1,0 @@
-To do:
-* automate cert/pubkey signing with CA on dev machines
-* update code to use pkcs#11 TA for generating keys and secure storage
-  for both server and client
-* (optional) buildroot: implement binary deployment via scp now that it's
-  working
