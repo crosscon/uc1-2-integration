@@ -1,7 +1,6 @@
 # TLS Examples Makefile
 CC					?= $(CROSS_COMPILE)gcc
 WOLFSSL_INSTALL_DIR ?= /usr/local
-LIBTEEC_INSTALL_DIR ?= #FIXME for building in yocto
 CFLAGS				+= -Wall -I$(WOLFSSL_INSTALL_DIR)/include -I$(LIBTEEC_INSTALL_DIR)/include
 LIBS				+= -L$(WOLFSSL_INSTALL_DIR)/lib -L$(LIBTEEC_INSTALL_DIR)/lib -lm
 LDFLAGS				+= -Wl,--hash-style=gnu

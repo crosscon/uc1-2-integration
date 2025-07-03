@@ -2,43 +2,6 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "yocto: builder: sync",
-            "type": "shell",
-            "command": "${workspaceFolder}/scripts/yocto_builder_sync.sh",
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "yocto: builder: build",
-            "type": "shell",
-            "dependsOn": [
-                "builder: sync"
-            ],
-            "command": "${workspaceFolder}/scripts/yocto_builder_build.sh",
-            "problemMatcher": []
-        },
-        {
-            "label": "yocto: builder: fetch",
-            "type": "shell",
-            "dependsOn": [
-                "builder: build"
-            ],
-            "command": "${workspaceFolder}/scripts/yocto_builder_fetch.sh",
-            "problemMatcher": []
-        },
-        {
-            "label": "yocto: rpi: deploy",
-            "type": "shell",
-            "dependsOn": [
-                "builder: fetch"
-            ],
-            "command": "${workspaceFolder}/scripts/yocto_rpi_deploy.sh",
-            "problemMatcher": []
-        },
-        {
             "label": "buildroot: sync sources",
             "type": "shell",
             "command": "${workspaceFolder}/scripts/buildroot_sync_src.sh",
