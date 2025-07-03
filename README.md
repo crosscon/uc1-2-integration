@@ -24,7 +24,6 @@ Below is the simplified repository structure with key components described.
 |   |               can't create patches with git or push changes.
 │   └── rootfs_overlay <-- Rootfs overlay, for various configurations, etc.
 ├── certs   <-- Pregenerated certificates
-├── patches <-- Conains patches for crosscon demos repo.
 ├── scripts <-- Stores scripts for various automated tasks.
 └── <sources and conf. files> <-- Source files are in the repo. root for best
                                   compat. between various build systems.
