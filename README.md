@@ -178,6 +178,15 @@ export PI_CLIENT_HOST=192.168.10.30
 
 Replace the values with the output of `udhcpc -i eth0` for each platform.
 
+**Note**: For development purposes, you can also deploy both server and client
+certificates on a single target (`PI_SERVER_HOST`). In that case, you don't need
+to specify `PI_CLIENT_HOST` address. To use single target set `SINGLE_TARGET`
+variable to `true` in `scripts/settings.sh`
+
+```bash
+export SINGLE_TARGET=true
+```
+
 Run `buildroot: generate keys` vs-code task, or simply execute
 `scripts/buildroot_ta_key_gen.sh` script. The public key will be fetched to
 `artifacts/certs/` directory.

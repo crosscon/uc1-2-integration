@@ -4,6 +4,10 @@
 # A file for user-editable settings #
 #####################################
 
+# Assume the server and client will run on single target: PI_SERVER_HOST
+# It ensures both server and client certificates are deployed on server.
+export SINGLE_TARGET=false
+
 # Target IPs
 export PI_SERVER_HOST=192.168.x.x
 export PI_CLIENT_HOST=192.168.x.x

@@ -4,40 +4,43 @@ set -e
 
 source "$(dirname "$0")/common.sh"
 
-scp ./certs/cert.conf $PI_SERVER:~
-scp ./certs/cert.conf $PI_CLIENT:~
+gen_csr_and_cert() {
+  local target="$1"
+  local prefix="$2"
+  local prefix_c="${prefix^}"
+
+  scp ./certs/cert.conf $target:~
+
+  echo "# Generating ${prefix} CSR"
+  ssh "$target" sh -i<<EOF
+export PKCS11_MODULE_PATH=/usr/lib/libckteec.so
+openssl req -engine pkcs11 -keyform engine \
+-key "pkcs11:token=${prefix_c}Token;object=${prefix_c}Key;type=private;pin-value=1234" \
+-new -config ~/cert.conf -out ~/${prefix}-csr.pem
+date $DATE_STRING
+EOF
+
+  scp $target:~/$prefix-csr.pem ./artifacts/certs
+
+  echo "# Generating $prefix certificate"
+  openssl pkey -pubin -inform DER -in ./artifacts/certs/$prefix-pubkey.der -out ./artifacts/certs/$prefix-pubkey.pem
+  openssl x509 -req -days 365 -in ./artifacts/certs/$prefix-csr.pem -CA ./certs/ca-cert.pem -CAkey ./certs/ca-key.pem -CAcreateserial -out ./artifacts/certs/$prefix-cert.pem -extfile ./certs/cert.conf -extensions req_ext
+
+  scp ./artifacts/certs/$prefix-cert.pem "$target":~
+  scp ./certs/ca-cert.pem "$target":~
+}
 
 DATE_STRING=$(date +"%m%d%H%M%Y")
 
-echo "# Generating server CSR"
-ssh "$PI_SERVER" sh -i<<EOF
-export PKCS11_MODULE_PATH=/usr/lib/libckteec.so
-openssl req -engine pkcs11 -keyform engine \
-  -key "pkcs11:token=ServerToken;object=ServerKey;type=private;pin-value=1234" \
-  -new -config ~/cert.conf -out ~/server-csr.pem 
-date $DATE_STRING
-EOF
+if [ "$SINGLE_TARGET" = "true" ]; then
+    echo "Warning! Single target configuration enabled!"
+fi
 
-ssh "$PI_CLIENT" sh -i<<EOF
-export PKCS11_MODULE_PATH=/usr/lib/libckteec.so
-openssl req -engine pkcs11 -keyform engine \
-  -key "pkcs11:token=ClientToken;object=ClientKey;type=private;pin-value=1234" \
-  -new -config ~/cert.conf -out ~/client-csr.pem 
-date $DATE_STRING
-EOF
+gen_csr_and_cert $PI_SERVER $PI_SERVER_PREFIX
+if [ "$SINGLE_TARGET" = "true" ]; then
+    gen_csr_and_cert $PI_SERVER $PI_CLIENT_PREFIX
+else
+    gen_csr_and_cert $PI_CLIENT $PI_CLIENT_PREFIX
+fi
 
-scp $PI_SERVER:~/server-csr.pem ./artifacts/certs
-scp $PI_CLIENT:~/client-csr.pem ./artifacts/certs
-
-echo "# Generating server certificate"
-openssl pkey -pubin -inform DER -in ./artifacts/certs/server-pubkey.der -out ./artifacts/certs/server-pubkey.pem
-openssl x509 -req -days 365 -in ./artifacts/certs/server-csr.pem -CA ./certs/ca-cert.pem -CAkey ./certs/ca-key.pem -CAcreateserial -out ./artifacts/certs/server-cert.pem -extfile ./certs/cert.conf -extensions req_ext
-
-echo "# Generating client cerificate"
-openssl pkey -pubin -inform DER -in ./artifacts/certs/client-pubkey.der -out ./artifacts/certs/client-pubkey.pem
-openssl x509 -req -days 365 -in ./artifacts/certs/client-csr.pem -CA ./certs/ca-cert.pem -CAkey ./certs/ca-key.pem -CAcreateserial -out ./artifacts/certs/client-cert.pem -extfile ./certs/cert.conf -extensions req_ext
-
-scp ./artifacts/certs/server-cert.pem "$PI_SERVER":~
-scp ./artifacts/certs/client-cert.pem "$PI_CLIENT":~
-scp ./certs/ca-cert.pem "$PI_SERVER":~
-scp ./certs/ca-cert.pem "$PI_CLIENT":~
+echo "# Done!"

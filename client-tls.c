@@ -38,8 +38,10 @@
 #define DEFAULT_PORT 12345
 
 #define CA_FILE     "/root/ca-cert.pem"
-#define CERT_FILE   "/root/client-cert.pem"
-#define KEY_FILE    "/root/client-key.pem"
+#define PREFIX      "client"
+#define CERT_FILE   "/root/" PREFIX "-cert.pem"
+#define KEY_FILE    "/root/" PREFIX "-key.pem"
+#define SLOT_ID 1
 #define PRIV_KEY_ID  {0x01}
 
 int main(int argc, char** argv)
@@ -61,7 +63,7 @@ int main(int argc, char** argv)
     const char* userPin = "1234";
     Pkcs11Dev dev;
     Pkcs11Token token;
-    int slotId = 0;
+    int slotId = SLOT_ID;
     int devId = 1;
 
     /* Check for proper calling convention */
