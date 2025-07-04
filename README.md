@@ -76,6 +76,19 @@ files must be then copied to SD card.
 env/build_rpi4.sh --steps=8-10
 ```
 
+To build hypervisor image run the following command.
+
+```bash
+# sudo is necessary here
+sudo env/create_hyp_img.sh
+```
+
+To flash the image you can use `dd` command.
+
+```bash
+sudo dd if=./crosscon-demo-img.img of=<drive> bs=4M conv=fsync
+```
+
 #### Testing
 
 To test if the apps work, you must now boot up 2 RPis with built image.
