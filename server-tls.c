@@ -138,7 +138,7 @@ int main()
     }
 
     if (wolfSSL_CTX_SetDevId(ctx, devId) != WOLFSSL_SUCCESS) {
-        printf(stderr, "ERROR: failed to create WOLFSSL_CTX\n");
+        fprintf(stderr, "ERROR: failed to create WOLFSSL_CTX\n");
         ret = -1;
         goto exit;
     }

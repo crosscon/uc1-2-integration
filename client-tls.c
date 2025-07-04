@@ -177,7 +177,7 @@ int main(int argc, char** argv)
     /* Load CA certificate into WOLFSSL_CTX for validating peer */
     ret = wolfSSL_CTX_load_verify_locations(ctx, CA_FILE, NULL);
     if (ret != WOLFSSL_SUCCESS) {
-        char *errString = wc_GetErrorString(ret);
+        const char *errString = wc_GetErrorString(ret);
         fprintf(stderr, "ERROR: failed to load %s, please check the file (%d).\n",
                 CA_FILE, ret);
         fprintf(stderr, "wolfSSL error: %s (%d)\n", errString, ret);
