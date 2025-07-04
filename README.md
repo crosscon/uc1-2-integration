@@ -53,57 +53,17 @@ Here's how to build image.
 
 #### Sync buildroot
 
-Update `CROSSCON_REPO_PATH` in `scripts/settings.sh` with the path to the cloned
+Update `CROSSCON_REPO_PATH` in `scripts/settings.sh` with the path to the local
 `CROSSCON-Hypervisor-and-TEE-Isolation-Demos` repository.
 
-Next, execute `buildroot: sync` vs-code task, or `scripts/buildroot_sync.sh`
-script to sync contents of this repository with Crosscon's buildroot.
+Next, execute `buildroot: sync` vs-code task, or `scripts/buildroot_sync.sh`.
+The script does the following:
+* Syncs configuration files: buildroot config, wolfsll config, opensc config.
+* Updates `packages/Config.in` so the app is being built by default.
+* Copies this repository contents to `buildroot/package/mtls`.
 
 Remember to run this task every time you update the sources, or make it run
 automatically when saving.
-
-#### Patch buildroot components
-
-Several buildroot components must be patched for solution to work properly. This
-unfortunately cannot be a single simple patch, as the buildroot is not tracked
-by Crosscon.
-
-##### Patch buildroot configuration
-
-For the app to work, additional buildroot components need to be enabled, this
-is the role for this step.
-
-Copy `buildroot/config/crosscon-buildroot.config` to
-`<crosscon_demos>/buildroot/build-aarch64/.config`
-
-Note that the config might change in the future, so check for differences first.
-
-##### Patch wolfssl config
-
-Wolfssl build configuration file must be patched for following reasons:
-1. Enable pkcs#11 support.
-2. Disable ARMv8 HW acceleration which caused "illegal instruction" issues.
-
-Use `buildroot/patches/wolfssl_config.patch` to patch wolfssl build
-configuration.  
-A file that needs to be patched is
-`<crosscon_demos>/buildroot/package/wolfssl/wolfssl.mk`.
-
-```bash
-patch <crosscon_demos>/buildroot/package/wolfssl/wolfssl.mk < buildroot/patches/wolfssl_config.patch
-```
-
-##### Patch opensc (pkcs11-tool)
-
-The `opensc` needs to be patched for generating public keys with `pkcs#11-tool`.
-
-Use `buildroot/patches/opensc.patch` to patch `opensc` build configuration.  
-A file that needs to be patched is
-`<crosscon_demos>/buildroot/package/opensc/opensc.mk`.
-
-```bash
-patch <crosscon_demos>/buildroot/package/opensc/opensc.mk < buildroot/patches/opensc.patch
-```
 
 #### Building
 
