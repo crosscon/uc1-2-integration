@@ -3,6 +3,12 @@
 This is a repository for client/server mTLS applications for the CROSSCON
 project.
 
+Contents:
+1. [References](#references)
+1. [Structure](#structure)
+1. [Building for buildroot and hypervisor](#building-for-buildroot-and-hypervisor)
+1. [Building legacy version for NXP demo (PC) or under yocto](#building-legacy-version-for-nxp-demo-pc-or-yocto)
+
 ## References
 
 Reference list:
@@ -29,52 +35,6 @@ Below is the simplified repository structure with key components described.
 └── <sources and conf. files> <-- Source files are in the repo. root for best
                                   compat. between various build systems.
 ```
-
-## Architecture
-
-Here are the build targets:
-
-* `make` - build default configuration.
-* `make debug` - builds default configuration with debug logs enabled.
-* `make install` - installs binaries and certificates onto the system.
-* `make clean` - removes temporary local files.
-
-### Additional options
-
-Here's the list of additional options. These shall be passed with `make` command
-to take effect:
-
-* `USE_ECC_CERTS=1` - Uses ECC certificates. This option is required to connect
-from NXP platform.
-
-## Building for PC (Fedora)
-
-Here are the steps for building `mtls` for PC (eg. Fedora).
-
-1. Install wolfssl
-    ```bash
-    dir=$(pwd)
-    sudo dnf install -y autoconf automake libtool
-    cd ~/Downloads
-    git clone https://github.com/wolfSSL/wolfssl.git
-    cd wolfssl
-    ./autogen.sh
-    ./configure
-    make
-    sudo make install
-    cd $dir
-    ```
-1. Add wolfssl to dynamic linker config
-    ```bash
-    echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/wolfssl.conf
-    sudo ldconfig
-    ```
-1. Build and install `mtls`
-    ```bash
-    export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
-    make
-    sudo make install # Necessary to install certificates in valid directory.
-    ```
 
 ## Building for buildroot and hypervisor
 
@@ -190,7 +150,7 @@ fatload mmc 0 0x200000 crossconhyp.bin; go 0x200000
 
 Perform the same steps for the second RPi.
 
-##### Generating key pairs (buildroot only)
+##### Generating key pairs
 
 This part describes how to generate key pair using PKCS#11 TA as secure storage.
 This works only if app was built on buildroot (not for Zarhus).
@@ -289,3 +249,14 @@ Shutdown complete
 
 Do not worry if the client prints `Segmentation fault` at the end. This is a
 known issue, which does not affect the process.
+
+## Building legacy version for NXP demo (PC) or yocto
+
+Building for PC support has been dropped due to architectural changes. To build
+[NXP tls demo](https://github.com/crosscon/uc1-integration/tree/puf-integration/tls_client)
+compliant version checkout to tag `yocto_legacy` and follow the readme to build
+the solution for either PC or yocto (Zarhus).
+
+```bash
+git checkout yocto_legacy
+```
