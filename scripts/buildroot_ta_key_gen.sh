@@ -47,4 +47,4 @@ else
 fi
 
 
-echo "# Keys generated, pubkeys fetched!"
+echo "# Done!"
