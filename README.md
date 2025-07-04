@@ -1,6 +1,6 @@
 # crosscon-uc1-2
 
-This is a repository for client/server mtls applications for the CROSSCON
+This is a repository for client/server mTLS applications for the CROSSCON
 project.
 
 ## References
@@ -9,6 +9,7 @@ Reference list:
 * [SSL/TLS Overview](https://www.wolfssl.com/documentation/manuals/wolfssl/appendix04.html)
 * [WolfSSL SSL tutorial](https://www.wolfssl.com/documentation/manuals/wolfssl/chapter11.html)
 * [WolfSSL TLS Examples](https://github.com/wolfSSL/wolfssl-examples/blob/master/tls/README.md)
+* [Up to speed on mTLS architecture](https://www.securew2.com/blog/mutual-tls-mtls-authentication)
 
 ## Structure
 
@@ -31,10 +32,49 @@ Below is the simplified repository structure with key components described.
 
 ## Architecture
 
-Following diagram shows mtls architecture.
+Here are the build targets:
 
-![MTLS ARCH](https://www.securew2.com/wp-content/uploads/2024/01/Picture1.png)  
-_Source: https://www.securew2.com/blog/mutual-tls-mtls-authentication_
+* `make` - build default configuration.
+* `make debug` - builds default configuration with debug logs enabled.
+* `make install` - installs binaries and certificates onto the system.
+* `make clean` - removes temporary local files.
+
+### Additional options
+
+Here's the list of additional options. These shall be passed with `make` command
+to take effect:
+
+* `USE_ECC_CERTS=1` - Uses ECC certificates. This option is required to connect
+from NXP platform.
+
+## Building for PC (Fedora)
+
+Here are the steps for building `mtls` for PC (eg. Fedora).
+
+1. Install wolfssl
+    ```bash
+    dir=$(pwd)
+    sudo dnf install -y autoconf automake libtool
+    cd ~/Downloads
+    git clone https://github.com/wolfSSL/wolfssl.git
+    cd wolfssl
+    ./autogen.sh
+    ./configure
+    make
+    sudo make install
+    cd $dir
+    ```
+1. Add wolfssl to dynamic linker config
+    ```bash
+    echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/wolfssl.conf
+    sudo ldconfig
+    ```
+1. Build and install `mtls`
+    ```bash
+    export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+    make
+    sudo make install # Necessary to install certificates in valid directory.
+    ```
 
 ## Building for buildroot and hypervisor
 

@@ -1,6 +1,7 @@
 /* client-tls.c
  *
  * Copyright (C) 2006-2020 wolfSSL Inc.
+ * Copyright (C) 2025 3mdeb Sp. z o.o.
  *
  * This file is part of wolfSSL. (formerly known as CyaSSL)
  *

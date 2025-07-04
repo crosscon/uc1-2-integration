@@ -1,6 +1,7 @@
 /* server-tls.c
  *
  * Copyright (C) 2006-2020 wolfSSL Inc.
+ * Copyright (C) 2025 3mdeb Sp. z o.o.
  *
  * This file is part of wolfSSL. (formerly known as CyaSSL)
  *
@@ -38,6 +39,9 @@
 /* teec */
 #include <tee_client_api.h>
 
+/* debug */
+#include "include/log.h"
+
 #define DEFAULT_PORT 12345
 
 #define CA_FILE     "/root/ca-cert.pem"
@@ -58,7 +62,7 @@ int main()
     size_t             len;
     int                shutdown = 0;
     int                ret;
-    const char*        reply = "I hear ya fa shizzle!\n";
+    const char*        reply = "Hello from WolfSSL TLS server!\n";
     char               wolfsslErrorStr[80];
 
     const char* library = "/usr/lib/libckteec.so";
@@ -112,8 +116,10 @@ int main()
 
     /* Create and initialize WOLFSSL_CTX */
 #ifdef USE_TLSV13
+    LOG_DBG("Using TLS v1.3\n");
     ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method());
 #else
+    LOG_DBG("using TLS v1.2\n");
     ctx = wolfSSL_CTX_new(wolfTLSv1_2_server_method());
 #endif
     if (ctx == NULL) {
@@ -164,8 +170,6 @@ int main()
     servAddr.sin_port        = htons(DEFAULT_PORT); /* on DEFAULT_PORT */
     servAddr.sin_addr.s_addr = INADDR_ANY;          /* from anywhere   */
 
-
-
     /* Bind the server socket to our port */
     if (bind(sockfd, (struct sockaddr*)&servAddr, sizeof(servAddr)) == -1) {
         fprintf(stderr, "ERROR: failed to bind\n");
@@ -180,8 +184,6 @@ int main()
         goto exit;
     }
 
-
-
     /* Continue to accept clients until shutdown is issued */
     while (!shutdown) {
         printf("Waiting for a connection...\n");
@@ -193,6 +195,12 @@ int main()
             ret = -1;
             goto exit;
         }
+
+#ifdef DEBUG
+        client_ip = inet_ntoa(clientAddr.sin_addr);
+        client_port = ntohs(clientAddr.sin_port);
+        LOG_DBG("Connection accepted from %s:%d\n", client_ip, client_port);
+#endif /* DEBUG */
 
         /* Create a WOLFSSL object */
         ret = wc_Pkcs11Token_Open(&token, 1);
@@ -222,12 +230,10 @@ int main()
             goto exit;
         }
 
-
         printf("Client connected successfully\n");
 
         cipher = wolfSSL_get_current_cipher(ssl);
         printf("SSL cipher suite is %s\n", wolfSSL_CIPHER_get_name(cipher));
-
 
         /* Read the client data into our buff array */
         memset(buff, 0, sizeof(buff));
