@@ -223,13 +223,17 @@ Shutdown complete
 Do not worry if the client prints `Segmentation fault` at the end. This is a
 known issue, which does not affect the process.
 
-## Building legacy version for NXP demo (PC) or yocto
+## Running NXP demo
+It is possible to deploy the server on RPI and use it with the client running on
+`LPC55S69`. All that should be required is to build and deploy the solution as a
+**single target** ([described here](#generating-key-pairs)) and run
+`server-tls`.
 
-Building for PC support has been dropped due to architectural changes. To build
-[NXP tls demo](https://github.com/crosscon/uc1-integration/tree/puf-integration/tls_client)
-compliant version checkout to tag `yocto_legacy` and follow the readme to build
-the solution for either PC or yocto (Zarhus).
+**FIXME: Remove this or update commit when this get's merged**  
+Make sure to build the NXP solution from
+[this](https://github.com/crosscon/uc1-integration/pull/4) branch.
 
-```bash
-git checkout yocto_legacy
-```
+The certificates should be already valid, but in case they expire, they can be
+easily regenerated via `scripts/gen_and_convert_certs.sh` script. As of now the
+generated c header files contents must be manually transferred (added to NXP
+solution source code).

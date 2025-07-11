@@ -2,24 +2,30 @@
 
 set -e
 
-CERT_DIR="./certs/ecc"
-OUTPUT_DIR="./artifacts/certs/ecc"
+ROOT_DIR=$(git -C "$(dirname "$(realpath $0)")" rev-parse --show-toplevel)
+CERTS_DIR="$ROOT_DIR/certs"
+GEN_CERTS_DIR="$ROOT_DIR/artifacts/certs"
+OUTPUT_DIR="$ROOT_DIR/artifacts/certs/der"
 mkdir -p "$OUTPUT_DIR"
+
+# Generate local client private-key
+cd $GEN_CERTS_DIR
+openssl ecparam -name prime256v1 -genkey -noout -out local-client-key.pem
+openssl req -new -key local-client-key.pem -out local-client.csr -subj "/CN=local-client"
+openssl x509 -req -days 365 -in local-client.csr -CA $CERTS_DIR/ca-cert.pem -CAkey $CERTS_DIR/ca-key.pem -CAcreateserial -out local-client-cert.pem  -extfile $CERTS_DIR/cert.conf -extensions req_ext
+openssl ec -in local-client-key.pem -pubout -out local-client-pubkey.pem
 
 # List of input PEM files
 FILES=(
-    "ca-cert.pem"
-    "client-cert.pem"
-    "client-key.pem"
-    "client-keyPub.pem"
-    "server-cert.pem"
-    "server-key.pem"
+    "certs/ca-cert.pem"
+    "artifacts/certs/local-client-cert.pem"
+    "artifacts/certs/local-client-key.pem"
 )
 
 echo "Converting PEM files to DER and generating C headers..."
 
 for FILE in "${FILES[@]}"; do
-    INPUT="$CERT_DIR/$FILE"
+    INPUT="$ROOT_DIR/$FILE"
     BASENAME=$(basename "$FILE" .pem)
     DER_FILE="$OUTPUT_DIR/${BASENAME}.der"
     C_HEADER="$OUTPUT_DIR/${BASENAME}.h"
@@ -38,7 +44,10 @@ for FILE in "${FILES[@]}"; do
 
     # Convert DER to C-style array
     echo "Generating C header: $C_HEADER"
-    xxd -i "$DER_FILE" > "$C_HEADER"
+    (
+        cd "$OUTPUT_DIR"
+        xxd -i "$(basename "$DER_FILE")" > "$(basename "$C_HEADER")"
+    )
 
     # Rename array to match the base name
     sed -i "s/${BASENAME}_der/${BASENAME}_der/g" "$C_HEADER"
