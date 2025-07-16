@@ -29,7 +29,7 @@ pkcs11-tool --module /usr/lib/libckteec.so \
   --output-file ${prefix}-pubkey.der
 EOF
 
-  echo "# Attempting to fetch certificates!"
+  echo "# Attempting to fetch keys!"
   scp $target:~/${prefix}-pubkey.der ./artifacts/certs/
 }
 

@@ -1,6 +1,6 @@
 config BR2_PACKAGE_MTLS
     bool "mtls"
-    # Following "depens" can be probably replaced with "select"
+    # Following "depends" can be probably replaced with "select"
     # Must be done right not to break any dependencies
     depends on BR2_PACKAGE_WOLFSSL && BR2_PACKAGE_OPTEE_CLIENT
     help
