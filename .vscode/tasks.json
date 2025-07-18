@@ -1,23 +1,41 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "buildroot: sync sources",
-            "type": "shell",
-            "command": "${workspaceFolder}/scripts/buildroot_sync_src.sh",
-            "problemMatcher": []
-        },
-        {
-            "label": "buildroot: generate keys",
-            "type": "shell",
-            "command": "${workspaceFolder}/scripts/buildroot_ta_key_gen.sh",
-            "problemMatcher": []
-        },
-        {
-            "label": "buildroot: generate certs",
-            "type": "shell",
-            "command": "${workspaceFolder}/scripts/buildroot_ta_cert_gen.sh",
-            "problemMatcher": []
-        }
-    ]
-  }
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "buildroot: sync sources",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/buildroot_sync_src.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "buildroot: generate keys",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/buildroot_ta_key_gen.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "buildroot: generate certs",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/buildroot_ta_cert_gen.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "buildroot: deploy binaries",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/deploy_bins.sh",
+      "dependsOn": [
+        "buildroot: sync sources"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "buildroot: setup target",
+      "dependsOn": [
+        "buildroot: generate keys",
+        "buildroot: generate certs"
+      ],
+      "problemMatcher": [],
+      "dependsOrder": "sequence"
+    },
+  ]
+}
