@@ -27,9 +27,16 @@ all: $(TARGETS)
 debug: CFLAGS+=$(DEBUG_FLAGS)
 debug: all
 
-# build template
-%: %.c
-	$(CC) -o $@ $(DEPS) $< $(CFLAGS) $(LDFLAGS) $(LIBS)
+# Source files
+COMMON_SRCS = include/common/transmission.c include/common/challenge.c
+CLIENT_SRCS = client-tls.c $(COMMON_SRCS)
+SERVER_SRCS = server-tls.c $(COMMON_SRCS)
+
+client-tls: $(CLIENT_SRCS)
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(LIBS)
+
+server-tls: $(SERVER_SRCS)
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS) $(LIBS)
 
 clean:
 	rm -f $(TARGETS)
