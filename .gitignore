@@ -1,3 +1,4 @@
 artifacts/
-client-tls
+certs/ca-cert.srl
 server-tls
+client-tls

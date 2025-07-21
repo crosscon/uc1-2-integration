@@ -2,40 +2,21 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "builder: sync",
+            "label": "buildroot: sync sources",
             "type": "shell",
-            "command": "${workspaceFolder}/scripts/builder_sync.sh",
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "label": "builder: build",
-            "type": "shell",
-            "dependsOn": [
-                "builder: sync"
-            ],
-            "command": "${workspaceFolder}/scripts/builder_build.sh",
+            "command": "${workspaceFolder}/scripts/buildroot_sync_src.sh",
             "problemMatcher": []
         },
         {
-            "label": "builder: fetch",
+            "label": "buildroot: generate keys",
             "type": "shell",
-            "dependsOn": [
-                "builder: build"
-            ],
-            "command": "${workspaceFolder}/scripts/builder_fetch.sh",
+            "command": "${workspaceFolder}/scripts/buildroot_ta_key_gen.sh",
             "problemMatcher": []
         },
         {
-            "label": "rpi: deploy",
+            "label": "buildroot: generate certs",
             "type": "shell",
-            "dependsOn": [
-                "builder: fetch"
-            ],
-            "command": "${workspaceFolder}/scripts/rpi_deploy.sh",
+            "command": "${workspaceFolder}/scripts/buildroot_ta_cert_gen.sh",
             "problemMatcher": []
         }
     ]
