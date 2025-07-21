@@ -56,8 +56,8 @@ Here's how to build image.
 Update `CROSSCON_REPO_PATH` in `scripts/settings.sh` with the path to the local
 `CROSSCON-Hypervisor-and-TEE-Isolation-Demos` repository.
 
-Next, execute `buildroot: sync` vs-code task, or `scripts/buildroot_sync.sh`.
-The script does the following:
+Next, execute `buildroot: sync` vs-code task, or
+`scripts/buildroot_sync_src.sh`. The script does the following:
 * Syncs configuration files: buildroot config, wolfsll config, opensc config.
 * Updates `packages/Config.in` so the app is being built by default.
 * Copies this repository contents to `buildroot/package/mtls`.
