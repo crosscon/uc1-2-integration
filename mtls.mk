@@ -10,15 +10,23 @@ MTLS_SITE_METHOD = local
 MTLS_DEPENDENCIES = wolfssl optee-client
 MTLS_INSTALL_TARGET = YES
 
+# Handle debug
+ifeq ($(BR2_PACKAGE_MTLS_DEBUG),y)
+MTLS_BUILD_TARGET = debug
+MTLS_EXTRA_CFLAGS = -g -DDEBUG
+else
+MTLS_BUILD_TARGET = all
+MTLS_EXTRA_CFLAGS =
+endif
+
 # Define the build commands
 define MTLS_BUILD_CMDS
-    $(MAKE) -C $(@D) \
+    $(MAKE) -C $(@D) $(MTLS_BUILD_TARGET) \
         CC="$(TARGET_CC)" \
         WOLFSSL_INSTALL_DIR="$(STAGING_DIR)/usr" \
-		LIBTEEC_INSTALL_DIR="$(STAGING_DIR)/usr" \
-        CFLAGS="$(TARGET_CFLAGS) -I$(STAGING_DIR)/usr/include" \
-		LIBS="$(TARGET_LDFLAGS) -L$(STAGING_DIR)/usr/lib -lm -lwolfssl -lteec"
-
+        LIBTEEC_INSTALL_DIR="$(STAGING_DIR)/usr" \
+        CFLAGS+="$(TARGET_CFLAGS) $(MTLS_EXTRA_CFLAGS) -I$(STAGING_DIR)/usr/include" \
+        LIBS+="$(TARGET_LDFLAGS) -L$(STAGING_DIR)/usr/lib -lm -lwolfssl -lteec"
 endef
 
 # Define install commands

@@ -5,3 +5,8 @@ config BR2_PACKAGE_MTLS
     depends on BR2_PACKAGE_WOLFSSL && BR2_PACKAGE_OPTEE_CLIENT
     help
       TLS client/server example app using wolfSSL.
+
+config BR2_PACKAGE_MTLS_DEBUG
+    bool "Enable debug build for mtls"
+    depends on BR2_PACKAGE_MTLS
+    default n
