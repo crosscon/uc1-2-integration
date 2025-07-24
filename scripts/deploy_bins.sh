@@ -18,12 +18,14 @@ ls "$BINARIES_PATH"/*-tls
 
 if [ "$SINGLE_TARGET" = "true" ]; then
     echo "# Deploying both binaries on a single target..."
-    scp $BINARIES_PATH/*-tls root@$PI_SERVER_HOST:"$TARGET_PATH/" || \
-        echo "Ensure the server is down!"; exit 1
+    scp "$BINARIES_PATH"/*-tls root@"$PI_SERVER_HOST":"$TARGET_PATH/" || {
+        echo "Ensure the server is down!"
+        exit 1l
+    }
 else
     echo "# Deploying binaries on both targets..."
-    scp $BINARIES_PATH/server-tls root@$PI_SERVER_HOST:"$TARGET_PATH/"
-    scp $BINARIES_PATH/client-tls root@$PI_CLIENT_HOST:"$TARGET_PATH/"
+    scp $BINARIES_PATH/server-tls root@$PI_SERVER_HOST:"$TARGET_PATH/";
+    scp $BINARIES_PATH/client-tls root@$PI_CLIENT_HOST:"$TARGET_PATH/";
 fi
 
 echo "# Done!"
