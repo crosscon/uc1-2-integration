@@ -2,6 +2,12 @@
 #include <string.h>
 #include <stdio.h>
 #include "transmission.h"
+#include "log.h"
+
+#ifdef IS_ZEPHYR
+  #include <zephyr/logging/log.h>
+  LOG_MODULE_REGISTER(transmission);
+#endif
 
 const uint8_t START_SEQ[START_SEQ_LEN] = {0x55, 0x55, 0x55, 0x55};
 const uint8_t STOP_SEQ[STOP_SEQ_LEN]  = {0xFF, 0xFF, 0xFF, 0xFF};
@@ -58,11 +64,11 @@ int sendAck(WOLFSSL* ssl) {
 
 /* Decode transmission */
 
-static int matchSeq(const uint8_t* buf, const uint8_t* seq, int len) {
+int matchSeq(const uint8_t* buf, const uint8_t* seq, uint8_t len) {
     return memcmp(buf, seq, len) == 0;
 }
 
-static int readExact(WOLFSSL* ssl, uint8_t* buf, size_t len) {
+int readExact(WOLFSSL* ssl, uint8_t* buf, uint8_t len) {
   size_t total_read = 0;
 
   while (total_read < len) {
@@ -85,11 +91,12 @@ static int readExact(WOLFSSL* ssl, uint8_t* buf, size_t len) {
   return 0;
 }
 
-int recStream(WOLFSSL* ssl, uint8_t* out_buf, size_t payload_len) {
-  uint8_t seq_buf[START_SEQ_LEN];
+int recStream(WOLFSSL* ssl, uint8_t* out_buf, uint8_t payload_len) {
+  uint8_t seq_buf[START_SEQ_LEN] = {0};
   int idx = 0;
   int err;
 
+  LOCAL_LOG_DBG("Attempting read");
   while (1) {
     int ret = wolfSSL_read(ssl, &seq_buf[idx], 1);
 
@@ -117,11 +124,15 @@ int recStream(WOLFSSL* ssl, uint8_t* out_buf, size_t payload_len) {
       return 1;
   }
 
+  LOCAL_LOG_DBG("Callin readExact() on out_buf");
   if (readExact(ssl, out_buf, payload_len) < 0)
-      return 1;
+    return 1;
+  LOCAL_LOG_DBG("Callin readExact() on seq_buf");
   if (readExact(ssl, seq_buf, STOP_SEQ_LEN) < 0)
-      return 1;
+    return 1;
+  LOCAL_LOG_DBG("Callin matchSeq()");
   if (!matchSeq(seq_buf, STOP_SEQ, STOP_SEQ_LEN))
-      return 1;
+    return 1;
+  LOCAL_LOG_DBG("recStream() finished!");
   return 0;
 }

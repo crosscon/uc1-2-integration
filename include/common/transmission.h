@@ -16,16 +16,16 @@ extern const uint8_t STOP_SEQ[STOP_SEQ_LEN];
 
 // Reads exactly len bytes into buf, blocking until done or error
 // Returns 0 on success, 1 on error
-static int readExact(WOLFSSL* ssl, uint8_t* buf, size_t len);
+int readExact(WOLFSSL* ssl, uint8_t* buf, uint8_t len);
 
 // Matches buf against seq for len bytes
 // Returns non-zero if equal, zero otherwise
-static int matchSeq(const uint8_t* buf, const uint8_t* seq, int len);
+int matchSeq(const uint8_t* buf, const uint8_t* seq, uint8_t len);
 
 // Blocking function to receive a framed binary stream:
 // waits for start sequence, reads payload_len bytes, waits for stop sequence
 // Returns 0 on success, 1 on error
-int recStream(WOLFSSL* ssl, uint8_t* out_buf, size_t payload_len);
+int recStream(WOLFSSL* ssl, uint8_t* out_buf, uint8_t payload_len);
 
 // Blocking function to send the ASCII "ACK" string reliably
 // Returns 0 on success, 1 on error

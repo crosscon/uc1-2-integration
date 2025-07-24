@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <wolfssl/ssl.h>
 
+#define ID_LEN          1
 #define CHALLENGE_LEN   32
 #define NONCE_LEN       64
 
@@ -15,16 +16,17 @@ typedef enum {
 
 typedef struct {
   func_t func;
-  const uint8_t* data_p1;
-  const uint8_t* data_p2;
-  const uint8_t* nonce;
+  uint8_t* data_p1;
+  uint8_t* data_p2;
+  uint8_t* nonce;
 } func_call_t;
 
 
 int initFunc(func_call_t *func, func_t func_id);
 void freeFunc(func_call_t *call);
-int sendFramedStream(WOLFSSL *ssl, const uint8_t *data, size_t len);
+int sendFramedStream(WOLFSSL *ssl, const uint8_t *data, uint8_t len);
 int sendChallenge(WOLFSSL *ssl, func_call_t *const func);
+int recChallenge(WOLFSSL* ssl, func_call_t * func);
 
 extern const uint8_t comm_cha_p1[CHALLENGE_LEN];
 extern const uint8_t comm_cha_p2[CHALLENGE_LEN];

@@ -1,10 +1,32 @@
 #include "challenge.h"
-#include <crypt.h>
 #include <wolfssl/ssl.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "transmission.h"
+#include "log.h"
+
+#ifdef IS_ZEPHYR
+  #include <zephyr/logging/log.h>
+  #include <zephyr/kernel.h>
+
+  LOG_MODULE_REGISTER(challenge);
+#endif
+
+/* Workarounds */
+
+// This function is a workaround for multiple buffering layers on LPC side
+void waitASec() {
+const uint8_t time = 1; // second
+
+#ifdef IS_ZEPHYR
+    k_msleep(time * 1000);
+#else
+    sleep(time);
+#endif
+}
+
 
 /* (De)Allocate mem */
 
@@ -46,7 +68,7 @@ void freeFunc(func_call_t* call) {
 
 /* Send / Receive Challenges */
 
-int sendFramedStream(WOLFSSL* ssl, const uint8_t* data, size_t len) {
+int sendFramedStream(WOLFSSL* ssl, const uint8_t* data, uint8_t len) {
   if (wolfSSL_write(ssl, START_SEQ, START_SEQ_LEN) != START_SEQ_LEN)
     return 1;
   if (wolfSSL_write(ssl, data, len) != (int)len)
@@ -56,60 +78,94 @@ int sendFramedStream(WOLFSSL* ssl, const uint8_t* data, size_t len) {
   return 0;
 }
 
-int sendChallenge(WOLFSSL* ssl, func_call_t * const func) {
-  if (sendFramedStream(ssl, (const uint8_t*)&func->func, sizeof(func_t)))
+int sendChallenge(WOLFSSL *ssl, func_call_t *const func) {
+  LOCAL_LOG_DBG("Sending func id");
+  if (sendFramedStream(ssl, (const uint8_t*)&func->func, ID_LEN))
     return 1;
+  waitASec();
+  LOCAL_LOG_DBG("Waiting for ack");
   if (waitForAck(ssl))
     return 1;
+  LOCAL_LOG_DBG("Sending data p1");
   if (sendFramedStream(ssl, func->data_p1, CHALLENGE_LEN))
     return 1;
+  waitASec();
+  LOCAL_LOG_DBG("Waiting for ack");
   if (waitForAck(ssl))
     return 1;
+  LOCAL_LOG_DBG("Sending data p2");
   if (sendFramedStream(ssl, func->data_p2, CHALLENGE_LEN))
     return 1;
+  waitASec();
+  LOCAL_LOG_DBG("Waiting for ack");
   if (waitForAck(ssl))
     return 1;
+
+  LOCAL_LOG_DBG("Checking nonce");
   if (!func->nonce)
     return 0;
+
+  LOCAL_LOG_DBG("Sending nonce");
   if (sendFramedStream(ssl, func->nonce, NONCE_LEN))
     return 1;
+  waitASec();
+  LOCAL_LOG_DBG("Waiting for ack");
+  if (waitForAck(ssl))
+    return 1;
+  LOCAL_LOG_DBG("sendChallange() successful");
   return 0;
 }
 
 int recChallenge(WOLFSSL* ssl, func_call_t * func) {
-  uint8_t buffer[BUF_SIZE];
+  uint8_t buffer[BUF_SIZE] = {0};
   func_t func_id;
 
   if (!func)
     return 1;
-  if (recStream(ssl, buffer, sizeof(func_t)))
+
+  waitASec();
+  LOCAL_LOG_DBG("Receiving the stream for func id");
+  if (recStream(ssl, buffer, ID_LEN))
     return 1;
+  LOCAL_LOG_DBG("Sending ack");
   if (sendAck(ssl))
     return 1;
 
   func_id = buffer[0];
+  LOCAL_LOG_DBG("Func Id is %d", func_id);
 
-  if (recStream(ssl, buffer, 4))
-      return 1;
+  waitASec();
+  LOCAL_LOG_DBG("Receiving the stream for data p1");
+  if (recStream(ssl, buffer, CHALLENGE_LEN))
+    return 1;
+  LOCAL_LOG_DBG("Sending ack");
   if (sendAck(ssl))
     return 1;
-  memcpy((void*)func->data_p1, buffer, CHALLENGE_LEN);
+  memcpy(func->data_p1, buffer, CHALLENGE_LEN);
 
-  if (recStream(ssl, buffer, 4))
-      return 1;
+  waitASec();
+  LOCAL_LOG_DBG("Receiving the stream for data p2");
+  if (recStream(ssl, buffer, CHALLENGE_LEN))
+    return 1;
+  LOCAL_LOG_DBG("Sending ack");
   if (sendAck(ssl))
     return 1;
-  memcpy((void*)func->data_p2, buffer, CHALLENGE_LEN);
+  memcpy(func->data_p2, buffer, CHALLENGE_LEN);
 
+  LOCAL_LOG_DBG("Checking if ZK_PROOFS");
   if (func_id != GET_ZK_PROOFS)
     return 0;
 
-  if (recStream(ssl, buffer, 4))
-      return 1;
+  waitASec();
+  LOCAL_LOG_DBG("Receiving the nonce");
+  if (recStream(ssl, buffer, NONCE_LEN))
+    return 1;
+  LOCAL_LOG_DBG("Sending ack");
   if (sendAck(ssl))
     return 1;
-  memcpy((void*)func->nonce, buffer, CHALLENGE_LEN);
+  memcpy(func->nonce, buffer, NONCE_LEN);
 
+  LOCAL_LOG_DBG("recChallenge() successful!");
   return 0;
 }
 
