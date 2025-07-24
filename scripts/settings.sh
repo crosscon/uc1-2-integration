@@ -16,3 +16,8 @@ export PI_CLIENT_HOST=192.168.x.x
 # https://github.com/3mdeb/CROSSCON-Hypervisor-and-TEE-Isolation-Demos/
 # Used to sync contents of this repository with buildroot in demo repo.
 export CROSSCON_REPO_PATH=<path_to_crosscon_demos>
+
+# A path to UC1 integration repository.
+# https://github.com/crosscon/uc1-integration
+# Used to sync common codebase for client app
+export UC1_INTEGRATION_PATH=<path_to_uc1_integration_repo>

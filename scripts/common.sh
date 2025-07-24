@@ -7,6 +7,8 @@
 # First source user settings
 source "$(dirname "$0")/settings.sh"
 
+export REPO_ROOT=$(git rev-parse --show-toplevel)
+
 export APP_NAME=mtls
 export BINARIES='*-tls'
 
