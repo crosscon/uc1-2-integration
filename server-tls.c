@@ -39,8 +39,8 @@
 /* teec */
 #include <tee_client_api.h>
 
-/* debug */
-#include "include/log.h"
+#include "include/common/log.h"
+#include "include/common/challenge.h"
 
 #define DEFAULT_PORT 12345
 
@@ -77,7 +77,11 @@ int main()
     /* declare wolfSSL objects */
     WOLFSSL_CTX* ctx = NULL;
     WOLFSSL*     ssl = NULL;
-    WOLFSSL_CIPHER* cipher;
+    WOLFSSL_CIPHER *cipher;
+
+#ifdef DEBUG
+    fprintf(stdout, "Debug enabled!\n");
+#endif
 
     wolfCrypt_Init();
 
@@ -116,10 +120,10 @@ int main()
 
     /* Create and initialize WOLFSSL_CTX */
 #ifdef USE_TLSV13
-    LOG_DBG("Using TLS v1.3\n");
+    LOCAL_LOG_DBG("Using TLS v1.3\n");
     ctx = wolfSSL_CTX_new(wolfTLSv1_3_server_method());
 #else
-    LOG_DBG("using TLS v1.2\n");
+    LOCAL_LOG_DBG("using TLS v1.2\n");
     ctx = wolfSSL_CTX_new(wolfTLSv1_2_server_method());
 #endif
     if (ctx == NULL) {
@@ -196,12 +200,6 @@ int main()
             goto exit;
         }
 
-#ifdef DEBUG
-        client_ip = inet_ntoa(clientAddr.sin_addr);
-        client_port = ntohs(clientAddr.sin_port);
-        LOG_DBG("Connection accepted from %s:%d\n", client_ip, client_port);
-#endif /* DEBUG */
-
         /* Create a WOLFSSL object */
         ret = wc_Pkcs11Token_Open(&token, 1);
         if (ret != 0) {
@@ -234,6 +232,16 @@ int main()
 
         cipher = wolfSSL_get_current_cipher(ssl);
         printf("SSL cipher suite is %s\n", wolfSSL_CIPHER_get_name(cipher));
+
+        if (sendChallenge(ssl, (void *)&comm_call)) {
+          fprintf(stderr, "ERROR: sendChallenge() failed!\n");
+          goto exit;
+        }
+
+        if (sendChallenge(ssl, (void *)&proofs_call)) {
+          fprintf(stderr, "ERROR: second sendChallenge() failed!\n");
+          goto exit;
+        }
 
         /* Read the client data into our buff array */
         memset(buff, 0, sizeof(buff));
