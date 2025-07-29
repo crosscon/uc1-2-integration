@@ -41,6 +41,7 @@
 
 #include "include/common/log.h"
 #include "include/common/challenge.h"
+#include "include/local_challenge.h"
 
 #define DEFAULT_PORT 12345
 
@@ -78,6 +79,11 @@ int main()
     WOLFSSL_CTX* ctx = NULL;
     WOLFSSL*     ssl = NULL;
     WOLFSSL_CIPHER *cipher;
+
+    /* Challenges*/
+    func_call_t initCh;
+    func_call_t commCh;
+    func_call_t proofsCh;
 
 #ifdef DEBUG
     fprintf(stdout, "Debug enabled!\n");
@@ -233,13 +239,49 @@ int main()
         cipher = wolfSSL_get_current_cipher(ssl);
         printf("SSL cipher suite is %s\n", wolfSSL_CIPHER_get_name(cipher));
 
-        if (sendChallenge(ssl, (void *)&comm_call)) {
-          fprintf(stderr, "ERROR: sendChallenge() failed!\n");
+        // Init init challenge
+        initFunc(&initCh, PUF_TA_INIT_FUNC_ID, pattern_init_commit);
+
+        // Init commitment challenge
+        initFunc(&commCh, PUF_TA_GET_COMMITMENT_FUNC_ID, pattern_init_commit);
+        memcpy(commCh.data_p[0].data, comm_cha_p1, commCh.data_p[0].len);
+        memcpy(commCh.data_p[1].data, comm_cha_p2, commCh.data_p[1].len);
+
+        // Init proofs challenge
+        initFunc(&proofsCh, PUF_TA_GET_ZK_PROOFS_FUNC_ID, pattern_proofs);
+        memcpy(commCh.data_p[0].data, proofs_cha_p1, commCh.data_p[0].len);
+        memcpy(commCh.data_p[1].data, proofs_cha_p2, commCh.data_p[1].len);
+        memcpy(commCh.data_p[2].data, nonce, commCh.data_p[2].len);
+
+        if (sendChallenge(ssl, (void *)&initCh)) {
+          fprintf(stderr, "ERROR: init sendChallenge() failed!\n");
           goto exit;
         }
 
-        if (sendChallenge(ssl, (void *)&proofs_call)) {
-          fprintf(stderr, "ERROR: second sendChallenge() failed!\n");
+        if (sendChallenge(ssl, (void *)&commCh)) {
+          fprintf(stderr, "ERROR: commitment sendChallenge() failed!\n");
+          goto exit;
+        }
+
+        if (sendChallenge(ssl, (void *)&proofsCh)) {
+          fprintf(stderr, "ERROR: proofs sendChallenge() failed!\n");
+          goto exit;
+        }
+
+        /* Wait until challenges are processed on PUF */
+
+        if (recResponse(ssl, (void *)&initCh)) {
+          fprintf(stderr, "ERROR: recResponse() for init failed!\n");
+          goto exit;
+        }
+
+        if (recResponse(ssl, (void *)&commCh)) {
+          fprintf(stderr, "ERROR: recResponse() for commitment failed!\n");
+          goto exit;
+        }
+
+        if (recResponse(ssl, (void *)&proofsCh)) {
+          fprintf(stderr, "ERROR: second recResponse() for proofs failed!\n");
           goto exit;
         }
 

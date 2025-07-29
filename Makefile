@@ -28,7 +28,7 @@ debug: CFLAGS+=$(DEBUG_FLAGS)
 debug: all
 
 # Source files
-COMMON_SRCS = include/common/transmission.c include/common/challenge.c
+COMMON_SRCS = include/common/transmission.c include/common/challenge.c include/local_challenge.c
 CLIENT_SRCS = client-tls.c $(COMMON_SRCS)
 SERVER_SRCS = server-tls.c $(COMMON_SRCS)
 

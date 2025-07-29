@@ -14,6 +14,9 @@
   LOG_MODULE_REGISTER(challenge);
 #endif
 
+const uint8_t pattern_init_commit[4] = {32, 32, 32, 32};
+const uint8_t pattern_proofs[4] = {32, 32, 64, 64};
+
 /* Workarounds */
 
 // This function is a workaround for multiple buffering layers on LPC side
@@ -30,40 +33,44 @@ const uint8_t time = 1; // second
 
 /* (De)Allocate mem */
 
-int initFunc(func_call_t* func, func_t func_id) {
-  if (!func)
-    return 1;
+int initFunc(func_call_t* func, func_t func_id, const uint8_t pattern[DATA_PORTIONS]) {
+    if (!func || !pattern)
+        return 1;
 
-  func->func = func_id;
-  func->data_p1 = malloc(CHALLENGE_LEN);
-  func->data_p2 = malloc(CHALLENGE_LEN);
-  func->nonce   = malloc(NONCE_LEN);
+    func->func = func_id;
 
-  if (!func->data_p1 || !func->data_p2 || !func->nonce) {
-      free((void*)func->data_p1);
-      free((void*)func->data_p2);
-      free((void*)func->nonce);
-      return 1;
-  }
+    for (int i = 0; i < DATA_PORTIONS; i++) {
+        func->data_p[i].len = pattern[i];
 
-  memset((void*)func->data_p1, 0, CHALLENGE_LEN);
-  memset((void*)func->data_p2, 0, CHALLENGE_LEN);
-  memset((void*)func->nonce,   0, NONCE_LEN);
+        if (pattern[i] > 0) {
+            func->data_p[i].data = malloc(pattern[i]);
+            if (!func->data_p[i].data) {
+                for (int j = 0; j < i; j++) {
+                    free(func->data_p[j].data);
+                    func->data_p[j].data = NULL;
+                    func->data_p[j].len = 0;
+                }
+                return 1;
+            }
+            memset(func->data_p[i].data, 0, pattern[i]);
+            continue;
+        }
 
-  return 0;
+        func->data_p[i].data = NULL;
+    }
+
+    return 0;
 }
 
 void freeFunc(func_call_t* call) {
-  if (!call)
-    return;
+    if (!call)
+        return;
 
-  free((void*)call->data_p1);
-  free((void*)call->data_p2);
-  free((void*)call->nonce);
-
-  call->data_p1 = NULL;
-  call->data_p2 = NULL;
-  call->nonce = NULL;
+    for (int i = 0; i < DATA_PORTIONS; i++) {
+        free(call->data_p[i].data);
+        call->data_p[i].data = NULL;
+        call->data_p[i].len = 0;
+    }
 }
 
 /* Send / Receive Challenges */
@@ -79,144 +86,82 @@ int sendFramedStream(WOLFSSL* ssl, const uint8_t* data, uint8_t len) {
 }
 
 int sendChallenge(WOLFSSL *ssl, func_call_t *const func) {
-  LOCAL_LOG_DBG("Sending func id");
-  if (sendFramedStream(ssl, (const uint8_t*)&func->func, ID_LEN))
-    return 1;
-  waitASec();
-  LOCAL_LOG_DBG("Waiting for ack");
-  if (waitForAck(ssl))
-    return 1;
-  LOCAL_LOG_DBG("Sending data p1");
-  if (sendFramedStream(ssl, func->data_p1, CHALLENGE_LEN))
-    return 1;
-  waitASec();
-  LOCAL_LOG_DBG("Waiting for ack");
-  if (waitForAck(ssl))
-    return 1;
-  LOCAL_LOG_DBG("Sending data p2");
-  if (sendFramedStream(ssl, func->data_p2, CHALLENGE_LEN))
-    return 1;
-  waitASec();
-  LOCAL_LOG_DBG("Waiting for ack");
-  if (waitForAck(ssl))
-    return 1;
+    if (!ssl || !func)
+        return 1;
 
-  LOCAL_LOG_DBG("Checking nonce");
-  if (!func->nonce)
+    LOCAL_LOG_DBG("Sending func id");
+    if (sendFramedStream(ssl, (const uint8_t *)&func->func, ID_LEN))
+        return 1;
+
+    waitASec();
+    LOCAL_LOG_DBG("Waiting for ack");
+    if (waitForAck(ssl))
+        return 1;
+
+    for (int i = 0; i < DATA_PORTIONS; i++) {
+        if (func->data_p[i].data && func->data_p[i].len > 0) {
+            LOCAL_LOG_DBG("Sending data portion: %d", i);
+            if (sendFramedStream(ssl, func->data_p[i].data, func->data_p[i].len))
+                return 1;
+
+            waitASec();
+
+            LOCAL_LOG_DBG("Waiting for ack");
+            if (waitForAck(ssl))
+                return 1;
+        }
+    }
+
+    LOCAL_LOG_DBG("sendChallenge() successful");
     return 0;
-
-  LOCAL_LOG_DBG("Sending nonce");
-  if (sendFramedStream(ssl, func->nonce, NONCE_LEN))
-    return 1;
-  waitASec();
-  LOCAL_LOG_DBG("Waiting for ack");
-  if (waitForAck(ssl))
-    return 1;
-  LOCAL_LOG_DBG("sendChallange() successful");
-  return 0;
 }
 
-int recChallenge(WOLFSSL* ssl, func_call_t * func) {
-  uint8_t buffer[BUF_SIZE] = {0};
-  func_t func_id;
+int sendResponse(WOLFSSL *ssl, func_call_t *const func) {
+    return sendChallenge(ssl, func);
+}
 
-  if (!func)
-    return 1;
 
-  waitASec();
-  LOCAL_LOG_DBG("Receiving the stream for func id");
-  if (recStream(ssl, buffer, ID_LEN))
-    return 1;
-  LOCAL_LOG_DBG("Sending ack");
-  if (sendAck(ssl))
-    return 1;
+int recChallenge(WOLFSSL* ssl, func_call_t *func) {
+    uint8_t buffer[BUF_SIZE] = {0};
+    uint32_t id = 0;
 
-  func_id = buffer[0];
-  LOCAL_LOG_DBG("Func Id is %d", func_id);
+    if (!ssl || !func)
+        return 1;
 
-  waitASec();
-  LOCAL_LOG_DBG("Receiving the stream for data p1");
-  if (recStream(ssl, buffer, CHALLENGE_LEN))
-    return 1;
-  LOCAL_LOG_DBG("Sending ack");
-  if (sendAck(ssl))
-    return 1;
-  memcpy(func->data_p1, buffer, CHALLENGE_LEN);
+    waitASec();
+    LOCAL_LOG_DBG("Receiving the stream for func id");
+    if (recStream(ssl, buffer, ID_LEN))
+        return 1;
 
-  waitASec();
-  LOCAL_LOG_DBG("Receiving the stream for data p2");
-  if (recStream(ssl, buffer, CHALLENGE_LEN))
-    return 1;
-  LOCAL_LOG_DBG("Sending ack");
-  if (sendAck(ssl))
-    return 1;
-  memcpy(func->data_p2, buffer, CHALLENGE_LEN);
+    LOCAL_LOG_DBG("Sending ack");
+    if (sendAck(ssl))
+        return 1;
 
-  LOCAL_LOG_DBG("Checking if ZK_PROOFS");
-  if (func_id != GET_ZK_PROOFS)
+    memcpy(&id, buffer, sizeof(uint32_t));
+    func->func = id;
+    LOCAL_LOG_DBG("Func id id 0x%08X", func->func);
+
+    for (int i = 0; i < DATA_PORTIONS; i++) {
+        if (func->data_p[i].data && func->data_p[i].len > 0) {
+            waitASec();
+            LOCAL_LOG_DBG("Receiving data portion: %d", i);
+            if (recStream(ssl, buffer, func->data_p[i].len))
+                return 1;
+
+            LOCAL_LOG_DBG("Sending ack");
+            if (sendAck(ssl))
+                return 1;
+
+            memcpy(func->data_p[i].data, buffer, func->data_p[i].len);
+        }
+    }
+
+    LOCAL_LOG_DBG("recChallenge() successful!");
     return 0;
+}
 
-  waitASec();
-  LOCAL_LOG_DBG("Receiving the nonce");
-  if (recStream(ssl, buffer, NONCE_LEN))
-    return 1;
-  LOCAL_LOG_DBG("Sending ack");
-  if (sendAck(ssl))
-    return 1;
-  memcpy(func->nonce, buffer, NONCE_LEN);
-
-  LOCAL_LOG_DBG("recChallenge() successful!");
-  return 0;
+int recResponse(WOLFSSL* ssl, func_call_t *func) {
+    return recChallenge(ssl, func);
 }
 
 /* Challenges */
-
-#ifndef IS_ZEPHYR
-
-const uint8_t comm_cha_p1[CHALLENGE_LEN] = {
-    0xD1, 0x33, 0x53, 0xE8, 0x6B, 0x41, 0xF9, 0x4C, 0x88, 0x77, 0xF6,
-    0x8F, 0xB9, 0x5A, 0xAD, 0x0A, 0x35, 0x82, 0x06, 0x95, 0xE2, 0x03,
-    0x74, 0x13, 0xBD, 0x57, 0xA9, 0xC4, 0x47, 0xDF, 0x11, 0xD9
-};
-
-const uint8_t comm_cha_p2[CHALLENGE_LEN] = {
-    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77
-};
-
-const uint8_t proofs_cha_p1[CHALLENGE_LEN] = {
-    0xD1, 0x33, 0x53, 0xE8, 0x6B, 0x41, 0xF9, 0x4C,
-    0x88, 0x77, 0xF6, 0x8F, 0xB9, 0x5A, 0xAD, 0x0A,
-    0x35, 0x82, 0x06, 0x95, 0xE2, 0x03, 0x74, 0x13,
-    0xBD, 0x57, 0xA9, 0xC4, 0x47, 0xDF, 0x11, 0xD9
-};
-
-const uint8_t proofs_cha_p2[CHALLENGE_LEN] = {
-    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77
-};
-
-const uint8_t nonce[NONCE_LEN] = {
-    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-    0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77
-};
-
-const func_call_t comm_call = {
-    GET_COMMITMENT, comm_cha_p1, comm_cha_p2, NULL
-};
-
-const func_call_t proofs_call = {
-    GET_ZK_PROOFS, proofs_cha_p1, proofs_cha_p2, nonce
-};
-
-#endif // IS_ZEPHYR
