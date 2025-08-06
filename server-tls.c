@@ -42,6 +42,7 @@
 #include "include/common/log.h"
 #include "include/common/challenge.h"
 #include "include/local_challenge.h"
+#include "include/puf_verifier.h"
 
 #define DEFAULT_PORT 12345
 
@@ -84,6 +85,7 @@ int main()
     func_call_t initCh;
     func_call_t commCh;
     func_call_t proofsCh;
+    data_portion_t nonceP;
 
 #ifdef DEBUG
     fprintf(stdout, "Debug enabled!\n");
@@ -249,9 +251,9 @@ int main()
 
         // Init proofs challenge
         initFunc(&proofsCh, PUF_TA_GET_ZK_PROOFS_FUNC_ID, pattern_proofs);
-        memcpy(commCh.data_p[0].data, proofs_cha_p1, commCh.data_p[0].len);
-        memcpy(commCh.data_p[1].data, proofs_cha_p2, commCh.data_p[1].len);
-        memcpy(commCh.data_p[2].data, nonce, commCh.data_p[2].len);
+        memcpy(proofsCh.data_p[0].data, proofs_cha_p1, proofsCh.data_p[0].len);
+        memcpy(proofsCh.data_p[1].data, proofs_cha_p2, proofsCh.data_p[1].len);
+        memcpy(proofsCh.data_p[2].data, nonce, proofsCh.data_p[2].len);
 
         if (sendChallenge(ssl, (void *)&initCh)) {
           fprintf(stderr, "ERROR: init sendChallenge() failed!\n");
@@ -282,6 +284,19 @@ int main()
 
         if (recResponse(ssl, (void *)&proofsCh)) {
           fprintf(stderr, "ERROR: second recResponse() for proofs failed!\n");
+          goto exit;
+        }
+
+        nonceP.len = LEN64;
+        nonceP.data = malloc(LEN64);
+        if (!nonceP.data) {
+          fprintf(stderr, "Error: Failed to allocate memory for nonce!\n");
+          goto exit;
+        }
+        memcpy(nonceP.data, nonce, LEN64);
+
+        if (verify(&initCh, &commCh, &proofsCh, &nonceP)) {
+          fprintf(stderr, "Error: Could not verify PUF authenticity.\n");
           goto exit;
         }
 
@@ -331,6 +346,7 @@ int main()
     wc_Pkcs11_Finalize(&dev);
 
 exit:
+    // FREE nonce and challenges
     /* Cleanup and return */
     if (ssl)
         wolfSSL_free(ssl);      /* Free the wolfSSL object              */
