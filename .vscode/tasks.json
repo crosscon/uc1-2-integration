@@ -22,7 +22,7 @@
     {
       "label": "buildroot: deploy binaries",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/deploy_bins.sh",
+      "command": "${workspaceFolder}/scripts/buildroot_deploy_bins.sh",
       "dependsOn": [
         "buildroot: sync sources"
       ],
@@ -40,7 +40,7 @@
     {
       "label": "nxp: sync common",
       "type": "shell",
-      "command": "${workspaceFolder}/scripts/sync_common.sh",
+      "command": "${workspaceFolder}/scripts/nxp_sync_common.sh",
       "problemMatcher": []
     }
   ]
