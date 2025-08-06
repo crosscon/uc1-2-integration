@@ -40,9 +40,11 @@
 #include <tee_client_api.h>
 
 #include "include/common/log.h"
-#include "include/common/challenge.h"
-#include "include/local_challenge.h"
-#include "include/puf_verifier.h"
+#ifdef NXP_PUF
+  #include "include/common/challenge.h"
+  #include "include/local_challenge.h"
+  #include "include/puf_verifier.h"
+#endif
 
 #define DEFAULT_PORT 12345
 
@@ -81,12 +83,19 @@ int main()
     WOLFSSL*     ssl = NULL;
     WOLFSSL_CIPHER *cipher;
 
+#ifdef NXP_PUF
     /* Challenges*/
     func_call_t initCh;
     func_call_t commCh;
     func_call_t proofsCh;
     data_portion_t nonceP;
+#endif
 
+#ifndef NXP_PUF
+    fprintf(stdout, "App compiled for dual RPI demo!\n");
+#else
+    fprintf(stdout, "App compiled for NXP demo!\n");
+#endif
 #ifdef DEBUG
     fprintf(stdout, "Debug enabled!\n");
 #endif
@@ -241,6 +250,7 @@ int main()
         cipher = wolfSSL_get_current_cipher(ssl);
         printf("SSL cipher suite is %s\n", wolfSSL_CIPHER_get_name(cipher));
 
+#ifdef NXP_PUF
         // Init init challenge
         initFunc(&initCh, PUF_TA_INIT_FUNC_ID, pattern_init_commit);
 
@@ -299,6 +309,7 @@ int main()
           fprintf(stderr, "Error: Could not verify PUF authenticity.\n");
           goto exit;
         }
+#endif /* NXP_PUF */
 
         /* Read the client data into our buff array */
         memset(buff, 0, sizeof(buff));
@@ -346,10 +357,12 @@ int main()
     wc_Pkcs11_Finalize(&dev);
 
 exit:
+#ifdef NXP_PUF
     freeFunc(&initCh);
     freeFunc(&commCh);
     freeFunc(&proofsCh);
     free(nonceP.data);
+#endif
     /* Cleanup and return */
     if (ssl)
         wolfSSL_free(ssl);      /* Free the wolfSSL object              */

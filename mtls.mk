@@ -19,6 +19,11 @@ MTLS_BUILD_TARGET = all
 MTLS_EXTRA_CFLAGS =
 endif
 
+# Handle NXP_PUF - build server for NXP PUF demo
+ifeq ($(BR2_PACKAGE_MTLS_NXP_PUF),y)
+MTLS_EXTRA_CFLAGS += -DNXP_PUF
+endif
+
 # Define the build commands
 define MTLS_BUILD_CMDS
     $(MAKE) -C $(@D) $(MTLS_BUILD_TARGET) \
