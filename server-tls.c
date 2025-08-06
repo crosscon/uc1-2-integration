@@ -346,7 +346,10 @@ int main()
     wc_Pkcs11_Finalize(&dev);
 
 exit:
-    // FREE nonce and challenges
+    freeFunc(&initCh);
+    freeFunc(&commCh);
+    freeFunc(&proofsCh);
+    free(nonceP.data);
     /* Cleanup and return */
     if (ssl)
         wolfSSL_free(ssl);      /* Free the wolfSSL object              */
