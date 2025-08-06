@@ -104,6 +104,7 @@ int sendChallenge(WOLFSSL *ssl, func_call_t *const func) {
             if (sendFramedStream(ssl, func->data_p[i].data, func->data_p[i].len))
                 return 1;
 
+            LOCAL_LOG_HEXDUMP_DBG(func->data_p[i].data, func->data_p[i].len, "Sent:");
             waitASec();
 
             LOCAL_LOG_DBG("Waiting for ack");
@@ -153,6 +154,7 @@ int recChallenge(WOLFSSL* ssl, func_call_t *func) {
                 return 1;
 
             memcpy(func->data_p[i].data, buffer, func->data_p[i].len);
+            LOCAL_LOG_HEXDUMP_DBG(func->data_p[i].data, func->data_p[i].len, "Rec:");
         }
     }
 
