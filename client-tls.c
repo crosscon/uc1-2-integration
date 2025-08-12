@@ -35,6 +35,13 @@
 #include <wolfssl/options.h>
 #include <wolfssl/ssl.h>
 #include <wolfssl/wolfcrypt/wc_pkcs11.h>
+#ifdef RPI_CBA
+  #include <math.h>
+  #include <tee_client_api.h>
+  #include <context_based_authentication.h>
+
+  #define CBA_NONCE_SIZE 16
+#endif
 
 #define DEFAULT_PORT 12345
 
@@ -44,6 +51,105 @@
 #define KEY_FILE    "/root/" PREFIX "-key.pem"
 #define SLOT_ID 1
 #define PRIV_KEY_ID  {0x01}
+
+#ifdef RPI_CBA
+TEEC_Result CBAEnroll() {
+    TEEC_Result res;
+    TEEC_Context ctx;
+    TEEC_Session sess;
+    TEEC_Operation op;
+    TEEC_UUID uuid = TA_CONTEXT_BASED_AUTHENTICATION_UUID;
+    uint32_t err_origin;
+
+    printf("Enrolling....\n");
+
+    res = TEEC_InitializeContext(NULL, &ctx);
+	if (res != TEEC_SUCCESS) {
+		printf("TEEC_InitializeContext failed with code 0x%x", res);
+        return res;
+    }
+
+	res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
+	if (res != TEEC_SUCCESS) {
+        printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+        return res;
+    }
+
+    memset(&op, 0, sizeof(op));
+
+    op.paramTypes = TEEC_PARAM_TYPES(
+        TEEC_NONE,
+        TEEC_NONE,
+        TEEC_NONE,
+        TEEC_NONE
+    );
+
+    res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_ENROLL, &op, &err_origin);
+    if (res != TEEC_SUCCESS) {
+        printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+        return res;
+    }
+
+    printf("TA result: Ok.\n");
+
+    TEEC_CloseSession(&sess);
+    TEEC_FinalizeContext(&ctx);
+
+    return TEEC_SUCCESS;
+}
+
+TEEC_Result CBAProve(char* nonce, size_t nonce_size, char* signature, size_t signature_size) {
+    TEEC_Result res;
+    TEEC_Context ctx;
+    TEEC_Session sess;
+    TEEC_Operation op;
+    TEEC_UUID uuid = TA_CONTEXT_BASED_AUTHENTICATION_UUID;
+    uint32_t err_origin;
+
+    printf("Proving...\n");
+
+    res = TEEC_InitializeContext(NULL, &ctx);
+	if (res != TEEC_SUCCESS) {
+		printf("TEEC_InitializeContext failed with code 0x%x", res);
+        return 1;
+    }
+
+	res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
+	if (res != TEEC_SUCCESS) {
+        printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+        return res;
+    }
+
+    memset(&op, 0, sizeof(op));
+
+    op.paramTypes = TEEC_PARAM_TYPES(
+        TEEC_MEMREF_TEMP_INPUT,
+        TEEC_MEMREF_TEMP_OUTPUT,
+        TEEC_NONE,
+        TEEC_NONE
+    );
+
+    op.params[0].tmpref.buffer = nonce;
+    op.params[0].tmpref.size = nonce_size;
+
+    op.params[1].tmpref.buffer = signature;
+    op.params[1].tmpref.size = signature_size;
+
+    res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_PROVE, &op, &err_origin);
+    if (res != TEEC_SUCCESS) {
+        printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+        return res;
+    }
+
+    printf("TA result: Ok\n");
+
+    TEEC_CloseSession(&sess);
+    TEEC_FinalizeContext(&ctx);
+
+    return TEEC_SUCCESS;
+}
+
+#ndef /* RPI_CBA */
 
 int main(int argc, char** argv)
 {
@@ -92,6 +198,14 @@ int main(int argc, char** argv)
       fprintf(stderr, "Failed to register PKCS#11 token\n");
       return ret;
     }
+
+#ifdef RPI_CBA
+     ret = CBAEnroll();
+     if (ret !=0 ) {
+       fprintf(stderr, "Failed to enroll context for Context-Based Authentication\n");
+       return ret;
+     }
+#endif /* ifdef RPI_CBA */
 
     /* Create a socket that uses an internet IPv4 address,
      * Sets the socket to be stream based (TCP),
