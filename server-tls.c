@@ -49,6 +49,7 @@
   #include <math.h>
   #include <tee_client_api.h>
   #include <context_based_authentication.h>
+  #include "include/common/challenge.h"
 
   #define CBA_NONCE_SIZE 16
 #endif
@@ -75,24 +76,24 @@ TEEC_Result CBAGenerateNonce(char* nonce, size_t nonce_size) {
     printf("Generating a nonce...\n");
 
     res = TEEC_InitializeContext(NULL, &ctx);
-	if (res != TEEC_SUCCESS) {
-		printf("TEEC_InitializeContext failed with code 0x%x", res);
-        return res;
+    if (res != TEEC_SUCCESS) {
+      printf("TEEC_InitializeContext failed with code 0x%x", res);
+      return res;
     }
 
-	res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
-	if (res != TEEC_SUCCESS) {
-        printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
-        return res;
+    res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
+    if (res != TEEC_SUCCESS) {
+      printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+      return res;
     }
 
     memset(&op, 0, sizeof(op));
 
     op.paramTypes = TEEC_PARAM_TYPES(
-        TEEC_MEMREF_TEMP_OUTPUT,
-        TEEC_NONE,
-        TEEC_NONE,
-        TEEC_NONE
+      TEEC_MEMREF_TEMP_OUTPUT,
+      TEEC_NONE,
+      TEEC_NONE,
+      TEEC_NONE
     );
 
     op.params[0].tmpref.buffer = nonce;
@@ -100,8 +101,8 @@ TEEC_Result CBAGenerateNonce(char* nonce, size_t nonce_size) {
 
     res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_GET_NONCE, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-        printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
-        return res;
+      printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+      return res;
     }
 
     printf("TA result: %x %x ... %x\n", nonce[0], nonce[1], nonce[15]);
@@ -123,24 +124,24 @@ TEEC_Result CBAVerifySignature(char nonce, size_t nonce_size, char* signature, s
     printf("Verifying a signature...\n");
 
     res = TEEC_InitializeContext(NULL, &ctx);
-	if (res != TEEC_SUCCESS) {
-		printf("TEEC_InitializeContext failed with code 0x%x", res);
-        return res;
+    if (res != TEEC_SUCCESS) {
+      printf("TEEC_InitializeContext failed with code 0x%x", res);
+      return res;
     }
 
-	res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
-	if (res != TEEC_SUCCESS) {
-        printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
-        return res;
+    res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
+    if (res != TEEC_SUCCESS) {
+      printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+      return res;
     }
 
     memset(&op, 0, sizeof(op));
 
     op.paramTypes = TEEC_PARAM_TYPES(
-        TEEC_MEMREF_TEMP_INPUT,
-        TEEC_MEMREF_TEMP_INPUT,
-        TEEC_NONE,
-        TEEC_NONE
+      TEEC_MEMREF_TEMP_INPUT,
+      TEEC_MEMREF_TEMP_INPUT,
+      TEEC_NONE,
+      TEEC_NONE
     );
 
     op.params[0].tmpref.buffer = nonce;
@@ -150,8 +151,8 @@ TEEC_Result CBAVerifySignature(char nonce, size_t nonce_size, char* signature, s
 
     res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_VERIFY, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-        printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
-        return res;
+      printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+      return res;
     }
 
     printf("TA result: Ok\n");
@@ -429,21 +430,31 @@ int main()
         memcpy(CBANonce, 0, CBANonceSize);
 
         // Generate CBA nonce:
-        if (CBAGenerateNonce(CBANonce, CBANonceSize)){
+        if (CBAGenerateNonce(CBANonce, CBANonceSize)) {
           fprintf(stderr, "ERROR: CBAGenerateNonce() failed!\n");
-	  goto exit;
-	}
+          goto exit;
+        }
 
-	/* TODO: send the nonce to the client and wait for the signature.
-	 * TODO: memcpy(CBASignature, 0, TODO);
-	 * */
+        /* TODO: memcpy(CBASignature, 0, TODO);
+         * TODO: pack the nonce into a structure needed for sendChallenge().
+         * */
 
-	if (CBAVerifySignature(CBANonce, CBANonceSize, CBASignature, CBASignatureSize)) {
+        if (sendChallenge(ssl, TODO)) {
+          fprintf(stderr, "ERROR: sendChallenge() failed!\n");
+          gito exit;
+        }
+
+        if (recResponse(ssl, TODO)) {
+          fprintf(stderr, "ERROR: recResponse() failed!\n");
+          goto exit;
+        }
+
+        /* TODO extract signature from recResponse() return value. */
+
+        if (CBAVerifySignature(CBANonce, CBANonceSize, CBASignature, CBASignatureSize)) {
           fprintf(stderr, "ERROR: CBAVerifySignature() dailed!\n");
-	  goto exit;
-	}
-
-	/* TODO: send second-factor auth. success to the client. */
+          goto exit;
+        }
 
 #endif /* RPI_CBA */
 

@@ -39,6 +39,7 @@
   #include <math.h>
   #include <tee_client_api.h>
   #include <context_based_authentication.h>
+  #include "include/common/challenge.h"
 
   #define CBA_NONCE_SIZE 16
 #endif
@@ -64,30 +65,30 @@ TEEC_Result CBAEnroll() {
     printf("Enrolling....\n");
 
     res = TEEC_InitializeContext(NULL, &ctx);
-	if (res != TEEC_SUCCESS) {
-		printf("TEEC_InitializeContext failed with code 0x%x", res);
-        return res;
+    if (res != TEEC_SUCCESS) {
+      printf("TEEC_InitializeContext failed with code 0x%x", res);
+      return res;
     }
 
-	res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
-	if (res != TEEC_SUCCESS) {
-        printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
-        return res;
+    res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
+    if (res != TEEC_SUCCESS) {
+      printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+      return res;
     }
 
     memset(&op, 0, sizeof(op));
 
     op.paramTypes = TEEC_PARAM_TYPES(
-        TEEC_NONE,
-        TEEC_NONE,
-        TEEC_NONE,
-        TEEC_NONE
+      TEEC_NONE,
+      TEEC_NONE,
+      TEEC_NONE,
+      TEEC_NONE
     );
 
     res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_ENROLL, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-        printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
-        return res;
+      printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+      return res;
     }
 
     printf("TA result: Ok.\n");
@@ -109,24 +110,24 @@ TEEC_Result CBAProve(char* nonce, size_t nonce_size, char* signature, size_t sig
     printf("Proving...\n");
 
     res = TEEC_InitializeContext(NULL, &ctx);
-	if (res != TEEC_SUCCESS) {
-		printf("TEEC_InitializeContext failed with code 0x%x", res);
-        return 1;
+    if (res != TEEC_SUCCESS) {
+      printf("TEEC_InitializeContext failed with code 0x%x", res);
+      return 1;
     }
 
-	res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
-	if (res != TEEC_SUCCESS) {
-        printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
-        return res;
+    res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
+    if (res != TEEC_SUCCESS) {
+      printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+      return res;
     }
 
     memset(&op, 0, sizeof(op));
 
     op.paramTypes = TEEC_PARAM_TYPES(
-        TEEC_MEMREF_TEMP_INPUT,
-        TEEC_MEMREF_TEMP_OUTPUT,
-        TEEC_NONE,
-        TEEC_NONE
+      TEEC_MEMREF_TEMP_INPUT,
+      TEEC_MEMREF_TEMP_OUTPUT,
+      TEEC_NONE,
+      TEEC_NONE
     );
 
     op.params[0].tmpref.buffer = nonce;
@@ -137,8 +138,8 @@ TEEC_Result CBAProve(char* nonce, size_t nonce_size, char* signature, size_t sig
 
     res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_PROVE, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-        printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
-        return res;
+      printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+      return res;
     }
 
     printf("TA result: Ok\n");
@@ -148,8 +149,7 @@ TEEC_Result CBAProve(char* nonce, size_t nonce_size, char* signature, size_t sig
 
     return TEEC_SUCCESS;
 }
-
-#ndef /* RPI_CBA */
+#endif /* RPI_CBA */
 
 int main(int argc, char** argv)
 {
@@ -172,6 +172,12 @@ int main(int argc, char** argv)
     Pkcs11Token token;
     int slotId = SLOT_ID;
     int devId = 1;
+
+#ifdef RPI_CBA
+    char CBANonce[CBA_NONCE_SIZE];
+    char* CBASignature;
+    size_t CBANonceSize = CBA_NONCE_SIZE, CBASignatureSize;
+#endif
 
     /* Check for proper calling convention */
     if (argc != 2) {
@@ -332,6 +338,39 @@ int main(int argc, char** argv)
 
     cipher = wolfSSL_get_current_cipher(ssl);
     printf("SSL cipher suite is %s\n", wolfSSL_CIPHER_get_name(cipher));
+
+#ifdef RPI_CBA
+        memcpy(CBANonce, 0, CBANonceSize);
+
+        // Generate CBA nonce:
+        if (CBAGenerateNonce(CBANonce, CBANonceSize)) {
+          fprintf(stderr, "ERROR: CBAGenerateNonce() failed!\n");
+          goto exit;
+        }
+
+        /* TODO: memcpy(CBASignature, 0, TODO);
+         * TODO: pack the nonce into a structure needed for sendChallenge().
+         * */
+
+        if (sendChallenge(ssl, TODO)) {
+          fprintf(stderr, "ERROR: sendChallenge() failed!\n");
+          gito exit;
+        }
+
+        if (recResponse(ssl, TODO)) {
+          fprintf(stderr, "ERROR: recResponse() failed!\n");
+          goto exit;
+        }
+
+        /* TODO extract signature from recResponse() return value. */
+
+        if (CBAVerifySignature(CBANonce, CBANonceSize, CBASignature, CBASignatureSize)) {
+          fprintf(stderr, "ERROR: CBAVerifySignature() dailed!\n");
+          goto exit;
+        }
+
+#endif /* RPI_CBA */
+
 
     /* Get a message for the server from stdin */
     printf("Message for server: ");
