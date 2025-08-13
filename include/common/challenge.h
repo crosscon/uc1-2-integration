@@ -14,6 +14,7 @@
 #ifdef CBA_RPI
 #define DATA_PORTIONS 1
 #define CBA_SIGNATURE_BUFFER_SIZE 255
+#define CBA_NONCE_SIZE 16
 #endif
 
 #define PUF_TA_INIT_FUNC_ID           ((uint32_t)0x00112233)

@@ -50,8 +50,6 @@
   #include <tee_client_api.h>
   #include <context_based_authentication.h>
   #include "include/common/challenge.h"
-
-  #define CBA_NONCE_SIZE 16
 #endif
 
 #define DEFAULT_PORT 12345
@@ -113,7 +111,7 @@ TEEC_Result CBAGenerateNonce(char* nonce, size_t nonce_size) {
     return TEEC_SUCCESS;
 }
 
-TEEC_Result CBAVerifySignature(char nonce, size_t nonce_size, char* signature, size_t signature_size) {
+TEEC_Result CBAVerifySignature(char* nonce, size_t nonce_size, char* signature, size_t signature_size) {
     TEEC_Result res;
     TEEC_Context ctx;
     TEEC_Session sess;
@@ -206,7 +204,7 @@ int main()
     size_t CBASignatureSize;
 
     func_call_t CBARequest, CBAResponce;
-    /* Is needed for initFunc(). */
+    /* Are needed for initFunc(). */
     const uint8_t CBASignaturePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_SIGNATURE_BUFFER_SIZE};
     const uint8_t CBANoncePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_NONCE_SIZE};
 #endif
@@ -432,10 +430,10 @@ int main()
 #endif /* NXP_PUF */
 
 #ifdef RPI_CBA
-        memcpy(CBANonce, 0, (size_t)CBANoncePatternSize[0]);
+        memcpy(CBANonce, 0, (size_t)CBA_NONCE_SIZE);
 
         // Generate CBA nonce:
-        if (CBAGenerateNonce(CBANonce, (size_t)CBANoncePatternSize[0])) {
+        if (CBAGenerateNonce(CBANonce, (size_t)CBA_NONCE_SIZE)) {
           fprintf(stderr, "ERROR: CBAGenerateNonce() failed!\n");
           goto exit;
         }
@@ -525,6 +523,8 @@ exit:
 #endif
 
 #ifdef RPI_CBA
+    freeFunc(&CBARequest);
+    freeFunc(&CBAResponce);
     free(CBASignature);
 #endif
     /* Cleanup and return */

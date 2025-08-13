@@ -40,8 +40,6 @@
   #include <tee_client_api.h>
   #include <context_based_authentication.h>
   #include "include/common/challenge.h"
-
-  #define CBA_NONCE_SIZE 16
 #endif
 
 #define DEFAULT_PORT 12345
@@ -179,8 +177,7 @@ int main(int argc, char** argv)
     size_t CBANonceSize = CBA_NONCE_SIZE, CBASignatureSize;
 
     func_call_t CBARequest, CBAResponce;
-    func_call_t CBARequest, CBAResponce;
-    /* Is needed for initFunc(). */
+    /* Are needed for initFunc(). */
     const uint8_t CBASignaturePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_SIGNATURE_BUFFER_SIZE};
     const uint8_t CBANoncePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_NONCE_SIZE};
 #endif
@@ -346,14 +343,14 @@ int main(int argc, char** argv)
     printf("SSL cipher suite is %s\n", wolfSSL_CIPHER_get_name(cipher));
 
 #ifdef RPI_CBA
-    memcpy(CBANonce, 0, (size_t)CBANoncePatternSize[0]);
+    memcpy(CBANonce, 0, (size_t)CBA_NONCE_SIZE);
 
     initFunc(&CBARequest, 0, CBANoncePatternSize);
     memcpy(CBARequest.data_p[0].data, CBANonce, (size_t)CBARequest.data_p[0].len);
     initFunc(&CBAResponce, 0, CBASignaturePatternSize);
     memcpy(CBAResponce.data_p[0].data, 0, (size_t)CBAResponce.data_p[0].len);
 
-    if (recChallenge(ssl, &CBANonce)) {
+    if (recChallenge(ssl, &CBARequest)) {
       fprintf(stderr, "ERROR: recChallenge() failed!\n");
       goto exit;
     }
@@ -368,7 +365,7 @@ int main(int argc, char** argv)
     memcpy(CBAResponce.data_p[0].data, CBASignature, CBASignatureSize);
     memcpy(CBAResponce.data_p[0].data+CBASignatureSize, '\0', sizeof(char));
 
-    if (sendResponce(ssl, TODO)) {
+    if (sendResponce(ssl, &CBAResponce)) {
       fprintf(stderr, "ERROR: sendResponce() failed!\n");
       goto exit;
     }
@@ -417,6 +414,13 @@ int main(int argc, char** argv)
     wc_Pkcs11Token_Close(&token);
     wc_Pkcs11Token_Final(&token);
     wc_Pkcs11_Finalize(&dev);
+
+exit:
+#ifdef RPI_CBA
+    freeFunc(&CBARequest);
+    freeFunc(&CBAResponce);
+    free(CBASignature);
+#endif
 
 cleanup:
   wolfSSL_free(ssl); /* Free the wolfSSL object                  */
