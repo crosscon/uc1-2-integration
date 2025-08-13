@@ -81,7 +81,7 @@ TEEC_Result CBAGenerateNonce(char* nonce, size_t nonce_size) {
 
     res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
     if (res != TEEC_SUCCESS) {
-      printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+      fprintf(stderr, "TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
       return res;
     }
 
@@ -99,7 +99,7 @@ TEEC_Result CBAGenerateNonce(char* nonce, size_t nonce_size) {
 
     res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_GET_NONCE, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-      printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+      fprintf(stderr, "TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
       return res;
     }
 
@@ -123,13 +123,13 @@ TEEC_Result CBAVerifySignature(char* nonce, size_t nonce_size, char* signature, 
 
     res = TEEC_InitializeContext(NULL, &ctx);
     if (res != TEEC_SUCCESS) {
-      printf("TEEC_InitializeContext failed with code 0x%x", res);
+      fprintf(stderr, "TEEC_InitializeContext failed with code 0x%x", res);
       return res;
     }
 
     res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
     if (res != TEEC_SUCCESS) {
-      printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+      fprintf(stderr, "TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
       return res;
     }
 
@@ -149,7 +149,7 @@ TEEC_Result CBAVerifySignature(char* nonce, size_t nonce_size, char* signature, 
 
     res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_VERIFY, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-      printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+      fprintf(stderr, "TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
       return res;
     }
 

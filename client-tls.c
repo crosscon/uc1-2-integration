@@ -64,13 +64,13 @@ TEEC_Result CBAEnroll() {
 
     res = TEEC_InitializeContext(NULL, &ctx);
     if (res != TEEC_SUCCESS) {
-      printf("TEEC_InitializeContext failed with code 0x%x", res);
+      fprintf(stderr, "TEEC_InitializeContext failed with code 0x%x", res);
       return res;
     }
 
     res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
     if (res != TEEC_SUCCESS) {
-      printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+      fprintf(stderr, "TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
       return res;
     }
 
@@ -85,7 +85,7 @@ TEEC_Result CBAEnroll() {
 
     res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_ENROLL, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-      printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+      fprintf(stderr, "TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
       return res;
     }
 
@@ -109,13 +109,13 @@ TEEC_Result CBAProve(char* nonce, size_t nonce_size, char* signature, size_t sig
 
     res = TEEC_InitializeContext(NULL, &ctx);
     if (res != TEEC_SUCCESS) {
-      printf("TEEC_InitializeContext failed with code 0x%x", res);
+      fprintf(stderr, "TEEC_InitializeContext failed with code 0x%x", res);
       return 1;
     }
 
     res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
     if (res != TEEC_SUCCESS) {
-      printf("TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+      fprintf(stderr, "TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
       return res;
     }
 
@@ -136,7 +136,7 @@ TEEC_Result CBAProve(char* nonce, size_t nonce_size, char* signature, size_t sig
 
     res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_PROVE, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-      printf("TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+      fprintf(stderr, "TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
       return res;
     }
 
