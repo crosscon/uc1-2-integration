@@ -177,6 +177,12 @@ int main(int argc, char** argv)
     char CBANonce[CBA_NONCE_SIZE];
     char* CBASignature;
     size_t CBANonceSize = CBA_NONCE_SIZE, CBASignatureSize;
+
+    func_call_t CBARequest, CBAResponce;
+    func_call_t CBARequest, CBAResponce;
+    /* Is needed for initFunc(). */
+    const uint8_t CBASignaturePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_SIGNATURE_BUFFER_SIZE};
+    const uint8_t CBANoncePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_NONCE_SIZE};
 #endif
 
     /* Check for proper calling convention */
@@ -340,30 +346,33 @@ int main(int argc, char** argv)
     printf("SSL cipher suite is %s\n", wolfSSL_CIPHER_get_name(cipher));
 
 #ifdef RPI_CBA
-        memcpy(CBANonce, 0, CBANonceSize);
+    memcpy(CBANonce, 0, (size_t)CBANoncePatternSize[0]);
 
-        if (recChallenge(ssl, TODO)) {
-          fprintf(stderr, "ERROR: recChallenge() failed!\n");
-          goto exit;
-        }
+    initFunc(&CBARequest, 0, CBANoncePatternSize);
+    memcpy(CBARequest.data_p[0].data, CBANonce, (size_t)CBARequest.data_p[0].len);
+    initFunc(&CBAResponce, 0, CBASignaturePatternSize);
+    memcpy(CBAResponce.data_p[0].data, 0, (size_t)CBAResponce.data_p[0].len);
 
-        /* TODO: pack received from recChallenge() nonce into CBANonce
-         * structure.
-         */
+    if (recChallenge(ssl, &CBANonce)) {
+      fprintf(stderr, "ERROR: recChallenge() failed!\n");
+      goto exit;
+    }
 
-        if (CBAProve(CBANonce, CBANonceSize, CBASignature, CBASignatureSize)) {
-          fprintf(stderr, "ERROR: CBAProve() failed!\n");
-          goto exit;
-        }
+    memcpy(CBANonce, CBARequest.data_p[0].data, (size_t)CBANoncePatternSize[0]);
 
-	/* TODO: embed received signature to send via sendResponce. */
+    if (CBAProve(CBANonce, CBANonceSize, CBASignature, CBASignatureSize)) {
+      fprintf(stderr, "ERROR: CBAProve() failed!\n");
+      goto exit;
+    }
 
-        if (sendResponce(ssl, TODO)) {
-	  fprintf(stderr, "ERROR: sendResponce() failed!\n");
-	  goto exit;
-	}
+    memcpy(CBAResponce.data_p[0].data, CBASignature, CBASignatureSize);
+    memcpy(CBAResponce.data_p[0].data+CBASignatureSize, '\0', sizeof(char));
+
+    if (sendResponce(ssl, TODO)) {
+      fprintf(stderr, "ERROR: sendResponce() failed!\n");
+      goto exit;
+    }
 #endif /* RPI_CBA */
-
 
     /* Get a message for the server from stdin */
     printf("Message for server: ");

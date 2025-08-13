@@ -203,7 +203,12 @@ int main()
 #ifdef RPI_CBA
     char CBANonce[CBA_NONCE_SIZE];
     char* CBASignature;
-    size_t CBANonceSize = CBA_NONCE_SIZE, CBASignatureSize;
+    size_t CBASignatureSize;
+
+    func_call_t CBARequest, CBAResponce;
+    /* Is needed for initFunc(). */
+    const uint8_t CBASignaturePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_SIGNATURE_BUFFER_SIZE};
+    const uint8_t CBANoncePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_NONCE_SIZE};
 #endif
 
 #ifndef NXP_PUF
@@ -427,29 +432,37 @@ int main()
 #endif /* NXP_PUF */
 
 #ifdef RPI_CBA
-        memcpy(CBANonce, 0, CBANonceSize);
+        memcpy(CBANonce, 0, (size_t)CBANoncePatternSize[0]);
 
         // Generate CBA nonce:
-        if (CBAGenerateNonce(CBANonce, CBANonceSize)) {
+        if (CBAGenerateNonce(CBANonce, (size_t)CBANoncePatternSize[0])) {
           fprintf(stderr, "ERROR: CBAGenerateNonce() failed!\n");
           goto exit;
         }
 
-        /* TODO: memcpy(CBASignature, 0, TODO);
-         * TODO: pack the nonce into a structure needed for sendChallenge().
-         * */
+        initFunc(&CBARequest, CBA_PROVE_IDENTITY, CBANoncePatternSize);
+        memcpy(CBARequest.data_p[0].data, CBANonce, (size_t)CBARequest.data_p[0].len);
 
-        if (sendChallenge(ssl, TODO)) {
+        initFunc(&CBAResponce, 0, CBASignaturePatternSize);
+        memcpy(CBAResponce.data_p[0].data, 0, (size_t)CBAResponce.data_p[0].len);
+
+        if (sendChallenge(ssl, &CBARequest)) {
           fprintf(stderr, "ERROR: sendChallenge() failed!\n");
-          gito exit;
+          goto exit;
         }
 
-        if (recResponse(ssl, TODO)) {
+        if (recResponse(ssl, &CBAResponce)) {
           fprintf(stderr, "ERROR: recResponse() failed!\n");
           goto exit;
         }
 
-        /* TODO extract signature from recResponse() return value. */
+        CBASignatureSize = strlen(CBAResponce.data_p[0].data);
+        CBASignature = malloc(CBASignatureSize);
+        if (!CBASignature) {
+          fprintf(stderr, "ERROR: Context-Based Authentication signature buffer allocation failed!\n");
+          goto exit;
+        }
+        memcpy(CBASignature, CBASignatureSize, CBAResponce.data_p[0].data);
 
         if (CBAVerifySignature(CBANonce, CBANonceSize, CBASignature, CBASignatureSize)) {
           fprintf(stderr, "ERROR: CBAVerifySignature() dailed!\n");
