@@ -342,33 +342,26 @@ int main(int argc, char** argv)
 #ifdef RPI_CBA
         memcpy(CBANonce, 0, CBANonceSize);
 
-        // Generate CBA nonce:
-        if (CBAGenerateNonce(CBANonce, CBANonceSize)) {
-          fprintf(stderr, "ERROR: CBAGenerateNonce() failed!\n");
+        if (recChallenge(ssl, TODO)) {
+          fprintf(stderr, "ERROR: recChallenge() failed!\n");
           goto exit;
         }
 
-        /* TODO: memcpy(CBASignature, 0, TODO);
-         * TODO: pack the nonce into a structure needed for sendChallenge().
-         * */
+        /* TODO: pack received from recChallenge() nonce into CBANonce
+         * structure.
+         */
 
-        if (sendChallenge(ssl, TODO)) {
-          fprintf(stderr, "ERROR: sendChallenge() failed!\n");
-          gito exit;
-        }
-
-        if (recResponse(ssl, TODO)) {
-          fprintf(stderr, "ERROR: recResponse() failed!\n");
+        if (CBAProve(CBANonce, CBANonceSize, CBASignature, CBASignatureSize)) {
+          fprintf(stderr, "ERROR: CBAProve() failed!\n");
           goto exit;
         }
 
-        /* TODO extract signature from recResponse() return value. */
+	/* TODO: embed received signature to send via sendResponce. */
 
-        if (CBAVerifySignature(CBANonce, CBANonceSize, CBASignature, CBASignatureSize)) {
-          fprintf(stderr, "ERROR: CBAVerifySignature() dailed!\n");
-          goto exit;
-        }
-
+        if (sendResponce(ssl, TODO)) {
+	  fprintf(stderr, "ERROR: sendResponce() failed!\n");
+	  goto exit;
+	}
 #endif /* RPI_CBA */
 
 
