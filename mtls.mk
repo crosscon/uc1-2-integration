@@ -19,9 +19,14 @@ MTLS_BUILD_TARGET = all
 MTLS_EXTRA_CFLAGS =
 endif
 
-# Handle NXP_PUF - build server for NXP PUF demo
+# Handle NXP_PUF - build server for NXP PUF (UC1.1) demo
 ifeq ($(BR2_PACKAGE_MTLS_NXP_PUF),y)
 MTLS_EXTRA_CFLAGS += -DNXP_PUF
+endif
+
+# Handle RPI_CBA - build server for RPI CBA (UC1.2) demo
+ifeq ($(BR2_PACKAGE_MTLS_RPI_CBA),y)
+MTLS_EXTRA_CFLAGS += -DRPI_CBA
 endif
 
 # Define the build commands
