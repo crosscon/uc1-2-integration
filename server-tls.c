@@ -43,7 +43,7 @@
   #include "include/puf_verifier.h"
 #endif
 #ifdef RPI_CBA
-  #include "include/common/tee_client_api.h"
+  #include <tee_client_api.h>
   #include "include/common/context_based_authentication.h"
   #include "include/common/challenge.h"
 #endif
