@@ -12,18 +12,18 @@ gen_and_fetch_keys() {
   echo "# Attempting to generate $prefix keys via PKCS#11 TA!"
   ssh "$target" sh -i<<EOF
 # List slots
-pkcs11-tool --module /usr/lib/libckteec.so -L
+pkcs11-tool --module /usr/lib/libckteec2.so -L
 # Init token
-pkcs11-tool --module /usr/lib/libckteec.so --init-token --slot ${slot} --label "${prefix_c}Token" --so-pin 1234
+pkcs11-tool --module /usr/lib/libckteec2.so --init-token --slot ${slot} --label "${prefix_c}Token" --so-pin 1234
 # Init pin
-pkcs11-tool --module /usr/lib/libckteec.so --slot ${slot} --login --so-pin 1234 --init-pin --pin 1234
+pkcs11-tool --module /usr/lib/libckteec2.so --slot ${slot} --login --so-pin 1234 --init-pin --pin 1234
 # Generate key pair
-pkcs11-tool --module /usr/lib/libckteec.so \
+pkcs11-tool --module /usr/lib/libckteec2.so \
   --slot ${slot} --login --pin 1234 \
   --keypairgen --key-type EC:prime256v1 \
   --label "${prefix_c}Key" --id 01
 # Export pubkey
-pkcs11-tool --module /usr/lib/libckteec.so \
+pkcs11-tool --module /usr/lib/libckteec2.so \
   --slot ${slot} --login --pin 1234 \
   --read-object --type pubkey --id 01 \
   --output-file ${prefix}-pubkey.der

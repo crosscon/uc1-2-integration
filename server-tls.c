@@ -36,9 +36,6 @@
 #include <wolfssl/ssl.h>
 #include <wolfssl/wolfcrypt/wc_pkcs11.h>
 
-/* teec */
-#include <tee_client_api.h>
-
 #include "include/common/log.h"
 #ifdef NXP_PUF
   #include "include/common/challenge.h"
@@ -175,7 +172,11 @@ int main()
     const char*        reply = "Hello from WolfSSL TLS server!\n";
     char               wolfsslErrorStr[80];
 
+#ifdef RPI_CBA
+    const char* library = "/usr/lib/libckteec2.so";
+#else
     const char* library = "/usr/lib/libckteec.so";
+#endif /* ifdef RPI_CBA */
     const char* tokenName = "ServerToken";
     const char* userPin = "1234";
     Pkcs11Dev dev;

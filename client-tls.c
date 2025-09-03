@@ -162,7 +162,11 @@ int main(int argc, char** argv)
     WOLFSSL*     ssl;
     WOLFSSL_CIPHER* cipher;
 
+#ifdef RPI_CBA
+    const char* library = "/usr/lib/libckteec2.so";
+#else
     const char* library = "/usr/lib/libckteec.so";
+#endif /* ifdef RPI_CBA */
     const char* tokenName = "ClientToken";
     const char* userPin = "1234";
     Pkcs11Dev dev;
