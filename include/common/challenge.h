@@ -8,10 +8,10 @@
 #define ID_LEN  4 // uint32_t
 #define LEN32   32
 #define LEN64   64
-#ifndef CBA_RPI
+#ifndef RPI_CBA
 #define DATA_PORTIONS 4
 #endif
-#ifdef CBA_RPI
+#ifdef RPI_CBA
 #define DATA_PORTIONS 1
 #define CBA_SIGNATURE_BUFFER_SIZE 255
 #define CBA_NONCE_SIZE 16
