@@ -430,7 +430,7 @@ int main()
 #endif /* NXP_PUF */
 
 #ifdef RPI_CBA
-        memcpy(CBANonce, 0, (size_t)CBA_NONCE_SIZE);
+        memset(CBANonce, 0, (size_t)CBA_NONCE_SIZE);
 
         // Generate CBA nonce:
         if (CBAGenerateNonce(CBANonce, (size_t)CBA_NONCE_SIZE)) {
@@ -442,7 +442,7 @@ int main()
         memcpy(CBARequest.data_p[0].data, CBANonce, (size_t)CBARequest.data_p[0].len);
 
         initFunc(&CBAResponce, 0, CBASignaturePatternSize);
-        memcpy(CBAResponce.data_p[0].data, 0, (size_t)CBAResponce.data_p[0].len);
+        memset(CBAResponce.data_p[0].data, 0, (size_t)CBAResponce.data_p[0].len);
 
         if (sendChallenge(ssl, &CBARequest)) {
           fprintf(stderr, "ERROR: sendChallenge() failed!\n");
@@ -460,9 +460,9 @@ int main()
           fprintf(stderr, "ERROR: Context-Based Authentication signature buffer allocation failed!\n");
           goto exit;
         }
-        memcpy(CBASignature, CBASignatureSize, CBAResponce.data_p[0].data);
+        memcpy(CBASignature, CBAResponce.data_p[0].data, CBASignatureSize);
 
-        if (CBAVerifySignature(CBANonce, CBANonceSize, CBASignature, CBASignatureSize)) {
+        if (CBAVerifySignature(CBANonce, CBA_NONCE_SIZE, CBASignature, CBASignatureSize)) {
           fprintf(stderr, "ERROR: CBAVerifySignature() dailed!\n");
           goto exit;
         }

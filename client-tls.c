@@ -346,12 +346,12 @@ int main(int argc, char** argv)
     printf("SSL cipher suite is %s\n", wolfSSL_CIPHER_get_name(cipher));
 
 #ifdef RPI_CBA
-    memcpy(CBANonce, 0, (size_t)CBA_NONCE_SIZE);
+    memset(CBANonce, 0, (size_t)CBA_NONCE_SIZE);
 
     initFunc(&CBARequest, 0, CBANoncePatternSize);
     memcpy(CBARequest.data_p[0].data, CBANonce, (size_t)CBARequest.data_p[0].len);
     initFunc(&CBAResponce, 0, CBASignaturePatternSize);
-    memcpy(CBAResponce.data_p[0].data, 0, (size_t)CBAResponce.data_p[0].len);
+    memset(CBAResponce.data_p[0].data, 0, (size_t)CBAResponce.data_p[0].len);
 
     if (recChallenge(ssl, &CBARequest)) {
       fprintf(stderr, "ERROR: recChallenge() failed!\n");
@@ -366,9 +366,9 @@ int main(int argc, char** argv)
     }
 
     memcpy(CBAResponce.data_p[0].data, CBASignature, CBASignatureSize);
-    memcpy(CBAResponce.data_p[0].data+CBASignatureSize, '\0', sizeof(char));
+    memset(CBAResponce.data_p[0].data+CBASignatureSize, '\0', sizeof(char));
 
-    if (sendResponce(ssl, &CBAResponce)) {
+    if (sendResponse(ssl, &CBAResponce)) {
       fprintf(stderr, "ERROR: sendResponce() failed!\n");
       goto exit;
     }
