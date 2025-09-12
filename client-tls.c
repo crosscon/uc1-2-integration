@@ -133,6 +133,8 @@ TEEC_Result CBAProve(char* nonce, size_t nonce_size, char* signature, size_t sig
     op.params[1].tmpref.buffer = signature;
     op.params[1].tmpref.size = signature_size;
 
+    fprintf("Using nonce: %x %x ... %x\n", nonce[0], nonce[1], nonce[15]);
+
     res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_PROVE, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
       fprintf(stderr, "TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
@@ -176,12 +178,12 @@ int main(int argc, char** argv)
 
 #ifdef RPI_CBA
     char CBANonce[CBA_NONCE_SIZE];
-    char* CBASignature;
-    size_t CBANonceSize = CBA_NONCE_SIZE, CBASignatureSize;
+    char* CBASignature[CBA_SIGNATURE_BUFFER_SIZE];
+    size_t CBANonceSize = CBA_NONCE_SIZE, CBASignatureSize = CBA_SIGNATURE_BUFFER_SIZE;
 
     func_call_t CBARequest, CBAResponce;
     /* Are needed for initFunc(). */
-    const uint8_t CBASignaturePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_SIGNATURE_BUFFER_SIZE};
+    const uint8_t CBASignaturePatternSize[DATA_PORTIONS] = {(uint8_t)CBASignatureSize};
     const uint8_t CBANoncePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_NONCE_SIZE};
 #endif
 
