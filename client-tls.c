@@ -96,7 +96,7 @@ TEEC_Result CBAEnroll() {
     return TEEC_SUCCESS;
 }
 
-TEEC_Result CBAProve(char* nonce, size_t nonce_size, char* signature, size_t signature_size) {
+TEEC_Result CBAProve(char* nonce, size_t nonce_size, char* signature, size_t signature_buffer_size, size_t *signature_size) {
     TEEC_Result res;
     TEEC_Context ctx;
     TEEC_Session sess;
@@ -123,7 +123,7 @@ TEEC_Result CBAProve(char* nonce, size_t nonce_size, char* signature, size_t sig
     op.paramTypes = TEEC_PARAM_TYPES(
       TEEC_MEMREF_TEMP_INPUT,
       TEEC_MEMREF_TEMP_OUTPUT,
-      TEEC_NONE,
+      TEEC_VALUE_OUTPUT,
       TEEC_NONE
     );
 
@@ -131,15 +131,19 @@ TEEC_Result CBAProve(char* nonce, size_t nonce_size, char* signature, size_t sig
     op.params[0].tmpref.size = nonce_size;
 
     op.params[1].tmpref.buffer = signature;
-    op.params[1].tmpref.size = signature_size;
+    op.params[1].tmpref.size = signature_buffer_size;
 
-    fprintf("Using nonce: %x %x ... %x\n", nonce[0], nonce[1], nonce[15]);
+    printf("Using nonce: %x %x ... %x\n", nonce[0], nonce[1], nonce[15]);
 
     res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_PROVE, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
       fprintf(stderr, "TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
       return res;
     }
+
+    *signature_size = op.params[2].value.a;
+
+    printf("Signature: %x, %x, ..., %x (%u)\n", signature[0], signature[1], signature[(*signature_size) - 1], *signature_size);
 
     printf("TA result: Ok\n");
 
@@ -178,12 +182,12 @@ int main(int argc, char** argv)
 
 #ifdef RPI_CBA
     char CBANonce[CBA_NONCE_SIZE];
-    char* CBASignature[CBA_SIGNATURE_BUFFER_SIZE];
-    size_t CBANonceSize = CBA_NONCE_SIZE, CBASignatureSize = CBA_SIGNATURE_BUFFER_SIZE;
+    char CBASignature[CBA_SIGNATURE_BUFFER_SIZE];
+    size_t CBANonceSize = CBA_NONCE_SIZE, CBASignatureBufferSize = CBA_SIGNATURE_BUFFER_SIZE, CBASignatureSize = 0;
 
     func_call_t CBARequest, CBAResponce;
     /* Are needed for initFunc(). */
-    const uint8_t CBASignaturePatternSize[DATA_PORTIONS] = {(uint8_t)CBASignatureSize};
+    const uint8_t CBASignaturePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_MESSAGE_SIZE};
     const uint8_t CBANoncePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_NONCE_SIZE};
 #endif
 
@@ -349,11 +353,12 @@ int main(int argc, char** argv)
 
 #ifdef RPI_CBA
     memset(CBANonce, 0, (size_t)CBA_NONCE_SIZE);
+    memset(CBASignature, 0, (size_t)CBA_SIGNATURE_BUFFER_SIZE);
 
     initFunc(&CBARequest, 0, CBANoncePatternSize);
     memcpy(CBARequest.data_p[0].data, CBANonce, (size_t)CBARequest.data_p[0].len);
     initFunc(&CBAResponce, 0, CBASignaturePatternSize);
-    memset(CBAResponce.data_p[0].data, 0, (size_t)CBAResponce.data_p[0].len);
+    memcpy(CBARequest.data_p[0].data, CBASignature, (size_t)CBAResponce.data_p[0].len);
 
     if (recChallenge(ssl, &CBARequest)) {
       fprintf(stderr, "ERROR: recChallenge() failed!\n");
@@ -362,13 +367,18 @@ int main(int argc, char** argv)
 
     memcpy(CBANonce, CBARequest.data_p[0].data, (size_t)CBANoncePatternSize[0]);
 
-    if (CBAProve(CBANonce, CBANonceSize, CBASignature, CBASignatureSize)) {
+    if (CBAProve(CBANonce, CBANonceSize, CBASignature, CBASignatureBufferSize, &CBASignatureSize)) {
       fprintf(stderr, "ERROR: CBAProve() failed!\n");
       goto exit;
     }
 
+    if (CBASignatureSize >= CBASignaturePatternSize[0]) {
+      fprintf(stderr, "EROOR: The CBA signature is bigger than allocated communication buffer!\n");
+      goto exit;
+    }
+
     memcpy(CBAResponce.data_p[0].data, CBASignature, CBASignatureSize);
-    memset(CBAResponce.data_p[0].data+CBASignatureSize, '\0', sizeof(char));
+    memset(CBAResponce.data_p[0].data + CBASignatureSize, '\0', sizeof(char));
 
     if (sendResponse(ssl, &CBAResponce)) {
       fprintf(stderr, "ERROR: sendResponce() failed!\n");

@@ -200,8 +200,8 @@ int main()
 
 #ifdef RPI_CBA
     char CBANonce[CBA_NONCE_SIZE];
-    char* CBASignature;
-    size_t CBASignatureSize;
+    char CBASignature[CBA_SIGNATURE_BUFFER_SIZE];
+    size_t CBASignatureSize = 0;
 
     func_call_t CBARequest, CBAResponce;
     /* Are needed for initFunc(). */
@@ -431,6 +431,7 @@ int main()
 
 #ifdef RPI_CBA
         memset(CBANonce, 0, (size_t)CBA_NONCE_SIZE);
+        memset(CBASignature, 0, (size_t)CBA_SIGNATURE_BUFFER_SIZE);
 
         // Generate CBA nonce:
         if (CBAGenerateNonce(CBANonce, (size_t)CBA_NONCE_SIZE)) {
@@ -455,15 +456,14 @@ int main()
         }
 
         CBASignatureSize = strlen(CBAResponce.data_p[0].data);
-        CBASignature = malloc(CBASignatureSize);
-        if (!CBASignature) {
-          fprintf(stderr, "ERROR: Context-Based Authentication signature buffer allocation failed!\n");
+        if (CBASignatureSize == 0 || CBASignatureSize > CBAResponce.data_p[0].len) {
+          fprintf(stderr, "ERROR: wrong Context-Based Authentication signature size!\n");
           goto exit;
         }
         memcpy(CBASignature, CBAResponce.data_p[0].data, CBASignatureSize);
 
         if (CBAVerifySignature(CBANonce, CBA_NONCE_SIZE, CBASignature, CBASignatureSize)) {
-          fprintf(stderr, "ERROR: CBAVerifySignature() dailed!\n");
+          fprintf(stderr, "ERROR: CBAVerifySignature() failed!\n");
           goto exit;
         }
 

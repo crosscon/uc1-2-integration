@@ -13,7 +13,8 @@
 #endif
 #ifdef RPI_CBA
 #define DATA_PORTIONS 1
-#define CBA_SIGNATURE_BUFFER_SIZE 255
+#define CBA_MESSAGE_SIZE 128
+#define CBA_SIGNATURE_BUFFER_SIZE 512
 #define CBA_NONCE_SIZE 16
 #endif
 
