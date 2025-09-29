@@ -35,6 +35,9 @@
 #include <wolfssl/options.h>
 #include <wolfssl/ssl.h>
 #include <wolfssl/wolfcrypt/wc_pkcs11.h>
+
+#include "include/common/log.h"
+
 #ifdef RPI_CBA
   #include <tee_client_api.h>
   #include "include/common/context_based_authentication.h"
@@ -179,6 +182,10 @@ int main(int argc, char** argv)
     Pkcs11Token token;
     int slotId = SLOT_ID;
     int devId = 1;
+
+#ifdef DEBUG
+    fprintf(stdout, "Debug enabled!\n");
+#endif
 
 #ifdef RPI_CBA
     char CBANonce[CBA_NONCE_SIZE];
@@ -355,10 +362,19 @@ int main(int argc, char** argv)
     memset(CBANonce, 0, (size_t)CBA_NONCE_SIZE);
     memset(CBASignature, 0, (size_t)CBA_SIGNATURE_BUFFER_SIZE);
 
-    initFunc(&CBARequest, 0, CBANoncePatternSize);
+    if (initFunc(&CBARequest, 0, CBANoncePatternSize)) {
+      fprintf(stderr, "ERROR: initFunc for CBARequest failed!\n");
+      goto exit;
+    }
     memcpy(CBARequest.data_p[0].data, CBANonce, (size_t)CBARequest.data_p[0].len);
-    initFunc(&CBAResponce, 0, CBASignaturePatternSize);
-    memcpy(CBARequest.data_p[0].data, CBASignature, (size_t)CBAResponce.data_p[0].len);
+
+    if (initFunc(&CBAResponce, 0, CBASignaturePatternSize)) {
+      fprintf(stderr, "ERROR: initFunc for CBAResponse failed!\n");
+      goto exit;
+    }
+    memcpy(CBAResponce.data_p[0].data, CBASignature, (size_t)CBAResponce.data_p[0].len);
+
+    LOCAL_LOG_DBG("Attempting to receive challenge!");
 
     if (recChallenge(ssl, &CBARequest)) {
       fprintf(stderr, "ERROR: recChallenge() failed!\n");
@@ -366,6 +382,8 @@ int main(int argc, char** argv)
     }
 
     memcpy(CBANonce, CBARequest.data_p[0].data, (size_t)CBANoncePatternSize[0]);
+
+    LOCAL_LOG_DBG("Attempting CBAProve!");
 
     if (CBAProve(CBANonce, CBANonceSize, CBASignature, CBASignatureBufferSize, &CBASignatureSize)) {
       fprintf(stderr, "ERROR: CBAProve() failed!\n");
@@ -377,8 +395,14 @@ int main(int argc, char** argv)
       goto exit;
     }
 
+    LOCAL_LOG_DBG("Signature size is: %d", CBASignatureSize);
+    LOCAL_LOG_DBG("Message buffer size is: %d", CBAResponce.data_p[0].len);
+
     memcpy(CBAResponce.data_p[0].data, CBASignature, CBASignatureSize);
     memset(CBAResponce.data_p[0].data + CBASignatureSize, '\0', sizeof(char));
+
+    LOCAL_LOG_HEXDUMP_DBG(CBAResponce.data_p[0].data, CBAResponce.data_p[0].len, "Signature:");
+    LOCAL_LOG_DBG("Attempting to send response!");
 
     if (sendResponse(ssl, &CBAResponce)) {
       fprintf(stderr, "ERROR: sendResponce() failed!\n");
@@ -434,7 +458,6 @@ exit:
 #ifdef RPI_CBA
     freeFunc(&CBARequest);
     freeFunc(&CBAResponce);
-    free(CBASignature);
 #endif
 
 cleanup:

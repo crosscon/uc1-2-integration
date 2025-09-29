@@ -143,6 +143,9 @@ TEEC_Result CBAVerifySignature(char* nonce, size_t nonce_size, char* signature, 
     op.params[1].tmpref.buffer = signature;
     op.params[1].tmpref.size = signature_size;
 
+    LOCAL_LOG_HEXDUMP_DBG(op.params[0].tmpref.buffer, op.params[0].tmpref.size, "Nonce data:");
+    LOCAL_LOG_HEXDUMP_DBG(op.params[1].tmpref.buffer, op.params[1].tmpref.size, "Signature data:");
+
     res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_VERIFY, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
       fprintf(stderr, "TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
@@ -155,6 +158,20 @@ TEEC_Result CBAVerifySignature(char* nonce, size_t nonce_size, char* signature, 
     TEEC_FinalizeContext(&ctx);
 
     return TEEC_SUCCESS;
+}
+
+// Get content size assuming unused space is zeros
+size_t get_real_size(const unsigned char *data, size_t len) {
+    if (!data || len == 0) return 0;
+
+    size_t i = len;
+    while (i > 0) {
+        if (data[i - 1] != 0) {
+            return i;
+        }
+        i--;
+    }
+    return 0; // all zeros
 }
 #endif /* RPI_CBA */
 
@@ -205,7 +222,7 @@ int main()
 
     func_call_t CBARequest, CBAResponce;
     /* Are needed for initFunc(). */
-    const uint8_t CBASignaturePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_SIGNATURE_BUFFER_SIZE};
+    const uint8_t CBASignaturePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_MESSAGE_SIZE};
     const uint8_t CBANoncePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_NONCE_SIZE};
 #endif
 
@@ -439,10 +456,16 @@ int main()
           goto exit;
         }
 
-        initFunc(&CBARequest, CBA_PROVE_IDENTITY, CBANoncePatternSize);
+        if (initFunc(&CBARequest, CBA_PROVE_IDENTITY, CBANoncePatternSize)) {
+          fprintf(stderr, "initFunc for CBAResponce failed!\n");
+          goto exit;
+        }
         memcpy(CBARequest.data_p[0].data, CBANonce, (size_t)CBARequest.data_p[0].len);
 
-        initFunc(&CBAResponce, 0, CBASignaturePatternSize);
+        if (initFunc(&CBAResponce, 0, CBASignaturePatternSize)) {
+          fprintf(stderr, "initFunc for CBAResponce failed!\n");
+          goto exit;
+        }
         memset(CBAResponce.data_p[0].data, 0, (size_t)CBAResponce.data_p[0].len);
 
         if (sendChallenge(ssl, &CBARequest)) {
@@ -450,16 +473,29 @@ int main()
           goto exit;
         }
 
+        LOCAL_LOG_DBG("CBARequest send!");
+
         if (recResponse(ssl, &CBAResponce)) {
           fprintf(stderr, "ERROR: recResponse() failed!\n");
           goto exit;
         }
 
-        CBASignatureSize = strlen(CBAResponce.data_p[0].data);
+        LOCAL_LOG_DBG("CBAResponse received!");
+        LOCAL_LOG_DBG("First data portion size: %d", CBAResponce.data_p[0].len);
+        LOCAL_LOG_HEXDUMP_DBG(CBAResponce.data_p[0].data, CBAResponce.data_p[0].len, "Received:");
+
+        // Will break if last byte supposed to be zero
+        CBASignatureSize = get_real_size(
+            (const unsigned char *)CBAResponce.data_p[0].data,
+            CBAResponce.data_p[0].len
+        );
         if (CBASignatureSize == 0 || CBASignatureSize > CBAResponce.data_p[0].len) {
           fprintf(stderr, "ERROR: wrong Context-Based Authentication signature size!\n");
           goto exit;
         }
+
+        LOCAL_LOG_DBG("Signature size size is %d", CBASignatureSize);
+
         memcpy(CBASignature, CBAResponce.data_p[0].data, CBASignatureSize);
 
         if (CBAVerifySignature(CBANonce, CBA_NONCE_SIZE, CBASignature, CBASignatureSize)) {
@@ -525,7 +561,6 @@ exit:
 #ifdef RPI_CBA
     freeFunc(&CBARequest);
     freeFunc(&CBAResponce);
-    free(CBASignature);
 #endif
     /* Cleanup and return */
     if (ssl)
