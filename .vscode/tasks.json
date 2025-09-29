@@ -38,6 +38,16 @@
       "dependsOrder": "sequence"
     },
     {
+      /*All in one task: builds mtls, transfers apps to target, set ups keys.*/
+      "label": "buildroot: do all",
+      "dependsOn": [
+        "buildroot: deploy binaries",
+        "buildroot: setup target"
+      ],
+      "problemMatcher": [],
+      "dependsOrder": "sequence"
+    },
+    {
       "label": "nxp: sync common",
       "type": "shell",
       "command": "${workspaceFolder}/scripts/nxp_sync_common.sh",
