@@ -2,7 +2,6 @@
 
 source "$(dirname "$0")/common.sh"
 
-BUILD_SCRIPT="./rpi4-ws/run.sh"
 BINARIES_PATH="./buildroot/build-aarch64/build/mtls-1.0"
 TARGET_PATH="/usr/bin"
 
@@ -11,7 +10,7 @@ set -e
 cd $CROSSCON_REPO_PATH
 
 echo "# Rebuilding mtls app..."
-"$BUILD_SCRIPT" bash -c "cd buildroot && make mtls-dirclean O=build-aarch64/ && make mtls O=build-aarch64/"
+"$DEMOS_CONTAINER_SCRIPT" bash -c "cd buildroot && make mtls-dirclean O=build-aarch64/ && make mtls O=build-aarch64/"
 
 echo "# Available binaries:"
 ls "$BINARIES_PATH"/*-tls
