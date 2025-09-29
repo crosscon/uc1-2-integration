@@ -44,7 +44,7 @@
 #endif
 #ifdef RPI_CBA
   #include <tee_client_api.h>
-  #include "include/common/context_based_authentication.h"
+  #include "include/context_based_authentication.h"
   #include "include/common/challenge.h"
 #endif
 
