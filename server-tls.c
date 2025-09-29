@@ -505,6 +505,8 @@ int main()
 
 #endif /* RPI_CBA */
 
+        fprintf(stdout, "Authentication succeeded!\n");
+
         /* Read the client data into our buff array */
         memset(buff, 0, sizeof(buff));
         ret = wolfSSL_read(ssl, buff, sizeof(buff) - 1);
