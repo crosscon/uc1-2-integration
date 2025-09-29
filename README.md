@@ -39,25 +39,33 @@ Below is the simplified repository structure with key components described.
 
 ## Available demos
 
-This solution can be build for two scenarios:
-* Running mutual TLS on two RPIs - In this configuration the tls client and
+This solution can be build for three scenarios:
+* `TWO_RPI`: Running mutual TLS on two RPIs - In this configuration the tls client and
 server will run on client and server targets respectively. Both targets will
 store their private keys in a secure storage provided by `PKCS#11 TA`.
-* Running mutual TLS on RPI4 and NXP LPC55S69 - In this configuration, the RPI
-will perform a role of a server, and the LPC platform will behave as a client.
-The RPI will request the LPC for second factor authentication by challenging the
-PUF running on the LPC platform.
+* `RPI_CBA`: This configuration extends `TWO_RPI` for context based second
+factor authentication support. This configuration will leverage AI server to
+decide whether to authenticate the client based on it's context.
+* `NXP_PUF`: Running mutual TLS on RPI4 and NXP LPC55S69 - In this configuration,
+the RPI will perform a role of a server, and the LPC platform will behave as a
+client. The RPI will request the LPC for second factor authentication by
+challenging the PUF running on the LPC platform.
+
+_Note: Demo names, match those in `scripts/settings.sh` respectively._
 
 ## Settings
 
 The `scripts/settings.sh` file is used for storing user defined settings.
 Settings overview:
+* `DEMO` [`TWO_RPI`/`RPI_CBA`/`NXP_PUF`] - This setting changes build
+configuration, depending which demo is targeted. A full list with descriptions
+can be found in "[available demos](#available-demos)" section.
 * `SINGLE_TARGET` [true / false] - This setting is used to define if the keys
 and binaries should be deployed on two or a single target. For "two RPI" demo,
 this setting shall be set to `false`. For development purposes (to run server and
 client on a single machine), or for running a client on LPC55S69 the setting
 shall be set to `true`.
-* `PI_SERVER_HOST` [ ip addr] - An ip address of server target. In a
+* `PI_SERVER_HOST` [ip addr] - An ip address of server target. In a
   `SINGLE_TARGET` mode, all certificates and binaries are deployed to server.
 * `PI_CLIENT_HOST` [ip addr] - An ip address of client target. Unused in
   `SINGLE_TARGET` mode.
@@ -81,12 +89,19 @@ section aims to explain how to use said build system to build this solution.
 
 ### Prerequisites
 
-To build the app embedded into system you must first
-[build and run Crosscon demos for RPI](https://github.com/3mdeb/CROSSCON-Hypervisor-and-TEE-Isolation-Demos/blob/master/env/README.md).
+First
+[build and run default Crosscon demos configuration for RPI](https://github.com/3mdeb/CROSSCON-Hypervisor-and-TEE-Isolation-Demos/blob/master/rpi4-ws/README.md). You
+can skip flashing and running the hypervisor image. The aim is to know the
+build-system is working.
 
 ### Building the image
 
 Here's how to build image.
+
+#### Choose demo
+
+Decide which [demo](#available-demos) you want to build, and set up
+`DEMO` variable in `scripts/settings.sh` accordingly.
 
 #### Sync buildroot
 
@@ -96,7 +111,8 @@ Update `CROSSCON_REPO_PATH` in `scripts/settings.sh` with the path to the local
 Next, execute `buildroot: sync` vs-code task, or
 `scripts/buildroot_sync_src.sh`. The script does the following:
 * Syncs configuration files: `buildroot` config, `wolfssl` config, `opensc`
-  config.
+  config and marks the packages to rebuild if needed. For buildroot config, it
+  also sets up necessary options according to specified [demo](#available-demos).
 * Updates `packages/Config.in` so the app is being built by default.
 * Copies this repository contents to `buildroot/package/mtls`.
 
@@ -105,20 +121,39 @@ automatically when saving.
 
 #### Building and deploying manually
 
-To build the "OS" with the applications embedded in the system,
-**the steps 8 to 10 from `build_rpi4.sh`** need to be rerun, and the
-files must be then copied to SD card.
+To build the "OS" with the applications embedded in the system, run the bellow
+commands depending which demo you're running.
+
+**For `TWO_RPI` and `NXP_PUF`**:
 
 ```bash
 # Run the following inside the container
-env/build_rpi4.sh --steps=8-10
+rpi4-ws/build_rpi4.sh --all --local-confs
 ```
 
+**FOR `RPI_CBA`:**
+
+```bash
+./rpi4-ws/build.sh --all --local-confs --dts=./rpi4-ws/rpi4-host-linux.dts
+```
+
+The above commands will rebuild necessary components. The `--local-confs` flag
+makes sure to use local configs, that were synced in a previous step.
+
 To build hypervisor image run the following command.
+
+**For `TWO_RPI` and `NXP_PUF`**:
 
 ```bash
 # sudo is necessary here
 sudo env/create_hyp_img.sh
+```
+
+**FOR `RPI_CBA`:**
+
+```bash
+# sudo is necessary here
+sudo rpi4-ws/create_hyp_img.sh --config="rpi4-per-vm-vTEE"
 ```
 
 To flash the image you can use `dd` command.
@@ -245,7 +280,27 @@ _Note: If you're using
 [automated approach](#building-and-deploying-automatically) for building and
 deploying binaries, you don't have to regenerate the certificates each time._
 
-## Run dual RPI demo (dual or single target)
+##### deploy binaries and generate certificates at once
+
+The vscode task `buildroot: do all` has been set up. It rebuilds necessary
+binaries, transfers them to targets, and sets up certificates. This method
+can be used once, the solution has been built and deployed manually at least
+once.
+
+If not using vs-code, same result can be achieved running the following:
+
+```bash
+scripts/buildroot_sync_src.sh && \
+scripts/buildroot_deploy_bins.sh && \
+scripts/buildroot_ta_key_gen.sh && \
+scripts/buildroot_ta_cert_gen.sh
+```
+
+## Run `TWO_RPI` demo (dual or single target)
+
+_Note: Due to a
+[known bug which causes serial connection to drop](https://github.com/crosscon/CROSSCON-Hypervisor-and-TEE-Isolation-Demos/issues/46),
+it's advised to perform the following commands via ssh shell._
 
 Run the server binary.
 
@@ -295,26 +350,58 @@ Shutdown complete
 Do not worry if the client prints `Segmentation fault` at the end. This is a
 known issue, which does not affect the process.
 
-## Running NXP demo
-Here's how to run the demo for NXP platform.
+## Run `RPI_CBA` demo
 
-### Change compilation options
-In `buildroot/config/crosscon-buildroot.config` find the following line, and
-set the value to "y".
+To run `RPI_CBA` demo it is necessary to set up an AI server on development
+machine. To do so, you need to update IP address and wifi settings for `cba_ta`,
+as described in step 4 in
+"[Building RPI image](https://github.com/crosscon/uc1-integration/tree/main/cba#building-rpi-image)" section and rebuild the solution once again. Then set
+up and deploy the AI server according to
+"[Building remote server](https://github.com/crosscon/uc1-integration/tree/main/cba#building-remote-server)"
+section.
 
-```log
-[...]
-BR2_PACKAGE_MTLS_NXP_PUF=y
-[...]
+You might need to make a few changes so the server starts and produces logs:
+
+```diff
+diff --git a/.env b/.env
+index ace12619d6fb..501769832c0b 100644
+--- a/.env
++++ b/.env
+@@ -8,4 +8,5 @@ SIGN_CERT_PATH=./keys/sign_cert.pem
+ CSI_DATABASE_PATH=/db
+ ML_MODEL_SAMPLES_PER_RECORDING=64
+ ML_MODEL_CHECKPOINT_PATH=/ml/mlmodel
+-ACCEPTANCE_THRESHOLD=.4
+\ No newline at end of file
++ACCEPTANCE_THRESHOLD=.4
++PYTHONUNBUFFERED=1
+diff --git a/docker-compose.yml b/docker-compose.yml
+index d219301a79d2..2a1f9419d226 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -1,10 +1,11 @@
+ services:
+   remote:
+-    image: crosscon-cba-remote:latest
++    image: crosscon-ra-remote:latest
+     volumes:
+-      - "./keys:/keys:ro"
+       - "./db:/db"
+       - "./e2e.pt:/ml/mlmodel:ro"
++      - "./keys:/app/keys:ro"
++      - "./verified:/verified:ro"
+     env_file: ".env"
+     ports:
+       - 5432:5432
 ```
 
-Setting this up will result in compiling the tls server with support for PUF
-authentication, thus allow the client running on LPC55S69 to work correctly.
-Note that setting this up will break the compatibility with the client built
-here.
+Once the server is running you can continue just as in
+"[`TWO_RPI` demo](#run-two_rpi-demo-dual-or-single-target)" section.
+Note that this demo takes a very long time (up to 5 minutes) to complete by
+default, as it must gather CSI data two times.
 
-The configuration you just edited is updated as a part of `buildroot: sync`
-vs-code task (`scripts/buildroot_sync_src.sh` script).
+## Running `NXP_PUF` demo
+Here's how to run the demo for NXP platform.
 
 ### Update the path to uc1-integration and perform sync
 
@@ -348,3 +435,61 @@ re-flashed or rebooted the image, make sure to deploy certificates too.
 
 Run the server application, and once the NXP solution has been built, attempt to
 connect to the running server.
+
+
+## MISC
+
+### Buildroot: mtls config settings
+
+The local buildroot config located at
+`buildroot/config/crosscon-buildroot.config` contains a various settings
+that configure `mtls` application behavior. Here they are:
+
+```bash
+BR2_PACKAGE_MTLS=y
+BR2_PACKAGE_MTLS_DEBUG=y
+BR2_PACKAGE_MTLS_NXP_PUF=n
+BR2_PACKAGE_MTLS_RPI_CBA=n
+```
+
+The first two are self-explanatory:
+ * The first one enables building the `mtls` application.
+ * The second one enables debug mode with extended prints.
+
+The other two control which [demo](#available-demos) configuration is getting
+built.
+
+#### `TWO_RPI` demo
+
+For `TWO_RPI` demo, set variables as follows:
+
+```bash
+BR2_PACKAGE_MTLS_NXP_PUF=n
+BR2_PACKAGE_MTLS_RPI_CBA=n
+```
+
+This will disable PUF and context based auth.
+
+#### `RPI_CBA` demo
+
+For `RPI_CBA` demo, set variables as follows:
+
+```bash
+BR2_PACKAGE_MTLS_NXP_PUF=n
+BR2_PACKAGE_MTLS_RPI_CBA=y
+```
+
+This will disable PUF authentication, and enable context based auth.
+
+#### `RPI_CBA` demo
+
+For `NXP_PUF` demo, set variables as follows:
+
+```bash
+BR2_PACKAGE_MTLS_NXP_PUF=y
+BR2_PACKAGE_MTLS_RPI_CBA=y
+```
+
+This will enable PUF second factor authentication, and disable context based
+auth.
+
