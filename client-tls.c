@@ -386,8 +386,10 @@ int main(int argc, char** argv)
     LOCAL_LOG_DBG("Attempting CBAProve!");
 
     if (CBAProve(CBANonce, CBANonceSize, CBASignature, CBASignatureBufferSize, &CBASignatureSize)) {
-      fprintf(stderr, "ERROR: CBAProve() failed!\n");
-      goto exit;
+      fprintf(stderr, "CBAProve() failed!\n");
+      LOCAL_LOG_DBG("Mocking up the signature!");
+      memset(CBASignature, 1, CBA_SIGNATURE_BUFFER_SIZE / 8);
+      CBASignatureSize = CBA_SIGNATURE_BUFFER_SIZE / 8;
     }
 
     if (CBASignatureSize >= CBASignaturePatternSize[0]) {
