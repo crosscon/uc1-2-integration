@@ -493,3 +493,12 @@ BR2_PACKAGE_MTLS_RPI_CBA=y
 This will enable PUF second factor authentication, and disable context based
 auth.
 
+#### Running dhcp server
+
+The script at `scripts/run_dhcp_server.sh`, will allow you to create dhcp
+server on ethernet port or dhcp-server with bridged connection on internal
+nic via ethernet port + USB-NIC for example. Run the script with no params to
+see the usage. The script has been tested on Fedora 41.
+
+This is useful if you want to showcase context-based auth. and need to connect
+the PIs directly to the PC.
