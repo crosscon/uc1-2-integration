@@ -487,7 +487,7 @@ For `NXP_PUF` demo, set variables as follows:
 
 ```bash
 BR2_PACKAGE_MTLS_NXP_PUF=y
-BR2_PACKAGE_MTLS_RPI_CBA=y
+BR2_PACKAGE_MTLS_RPI_CBA=n
 ```
 
 This will enable PUF second factor authentication, and disable context based
