@@ -36,6 +36,14 @@
 #include <wolfssl/ssl.h>
 #include <wolfssl/wolfcrypt/wc_pkcs11.h>
 
+#include "include/common/log.h"
+
+#ifdef RPI_CBA
+  #include <tee_client_api.h>
+  #include "include/context_based_authentication.h"
+  #include "include/common/challenge.h"
+#endif
+
 #define DEFAULT_PORT 12345
 
 #define CA_FILE     "/root/ca-cert.pem"
@@ -44,6 +52,110 @@
 #define KEY_FILE    "/root/" PREFIX "-key.pem"
 #define SLOT_ID 1
 #define PRIV_KEY_ID  {0x01}
+
+#ifdef RPI_CBA
+TEEC_Result CBAEnroll() {
+    TEEC_Result res;
+    TEEC_Context ctx;
+    TEEC_Session sess;
+    TEEC_Operation op;
+    TEEC_UUID uuid = TA_CONTEXT_BASED_AUTHENTICATION_UUID;
+    uint32_t err_origin;
+
+    printf("Enrolling....\n");
+
+    res = TEEC_InitializeContext(NULL, &ctx);
+    if (res != TEEC_SUCCESS) {
+      fprintf(stderr, "TEEC_InitializeContext failed with code 0x%x", res);
+      return res;
+    }
+
+    res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
+    if (res != TEEC_SUCCESS) {
+      fprintf(stderr, "TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+      return res;
+    }
+
+    memset(&op, 0, sizeof(op));
+
+    op.paramTypes = TEEC_PARAM_TYPES(
+      TEEC_NONE,
+      TEEC_NONE,
+      TEEC_NONE,
+      TEEC_NONE
+    );
+
+    res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_ENROLL, &op, &err_origin);
+    if (res != TEEC_SUCCESS) {
+      fprintf(stderr, "TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+      return res;
+    }
+
+    printf("TA result: Ok.\n");
+
+    TEEC_CloseSession(&sess);
+    TEEC_FinalizeContext(&ctx);
+
+    return TEEC_SUCCESS;
+}
+
+TEEC_Result CBAProve(char* nonce, size_t nonce_size, char* signature, size_t signature_buffer_size, size_t *signature_size) {
+    TEEC_Result res;
+    TEEC_Context ctx;
+    TEEC_Session sess;
+    TEEC_Operation op;
+    TEEC_UUID uuid = TA_CONTEXT_BASED_AUTHENTICATION_UUID;
+    uint32_t err_origin;
+
+    printf("Proving...\n");
+
+    res = TEEC_InitializeContext(NULL, &ctx);
+    if (res != TEEC_SUCCESS) {
+      fprintf(stderr, "TEEC_InitializeContext failed with code 0x%x", res);
+      return 1;
+    }
+
+    res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
+    if (res != TEEC_SUCCESS) {
+      fprintf(stderr, "TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+      return res;
+    }
+
+    memset(&op, 0, sizeof(op));
+
+    op.paramTypes = TEEC_PARAM_TYPES(
+      TEEC_MEMREF_TEMP_INPUT,
+      TEEC_MEMREF_TEMP_OUTPUT,
+      TEEC_VALUE_OUTPUT,
+      TEEC_NONE
+    );
+
+    op.params[0].tmpref.buffer = nonce;
+    op.params[0].tmpref.size = nonce_size;
+
+    op.params[1].tmpref.buffer = signature;
+    op.params[1].tmpref.size = signature_buffer_size;
+
+    printf("Using nonce: %x %x ... %x\n", nonce[0], nonce[1], nonce[15]);
+
+    res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_PROVE, &op, &err_origin);
+    if (res != TEEC_SUCCESS) {
+      fprintf(stderr, "TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+      return res;
+    }
+
+    *signature_size = op.params[2].value.a;
+
+    printf("Signature: %x, %x, ..., %x (%u)\n", signature[0], signature[1], signature[(*signature_size) - 1], *signature_size);
+
+    printf("TA result: Ok\n");
+
+    TEEC_CloseSession(&sess);
+    TEEC_FinalizeContext(&ctx);
+
+    return TEEC_SUCCESS;
+}
+#endif /* RPI_CBA */
 
 int main(int argc, char** argv)
 {
@@ -59,13 +171,32 @@ int main(int argc, char** argv)
     WOLFSSL*     ssl;
     WOLFSSL_CIPHER* cipher;
 
+#ifdef RPI_CBA
+    const char* library = "/usr/lib/libckteec2.so";
+#else
     const char* library = "/usr/lib/libckteec.so";
+#endif /* ifdef RPI_CBA */
     const char* tokenName = "ClientToken";
     const char* userPin = "1234";
     Pkcs11Dev dev;
     Pkcs11Token token;
     int slotId = SLOT_ID;
     int devId = 1;
+
+#ifdef DEBUG
+    fprintf(stdout, "Debug enabled!\n");
+#endif
+
+#ifdef RPI_CBA
+    char CBANonce[CBA_NONCE_SIZE];
+    char CBASignature[CBA_SIGNATURE_BUFFER_SIZE];
+    size_t CBANonceSize = CBA_NONCE_SIZE, CBASignatureBufferSize = CBA_SIGNATURE_BUFFER_SIZE, CBASignatureSize = 0;
+
+    func_call_t CBARequest, CBAResponce;
+    /* Are needed for initFunc(). */
+    const uint8_t CBASignaturePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_MESSAGE_SIZE};
+    const uint8_t CBANoncePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_NONCE_SIZE};
+#endif
 
     /* Check for proper calling convention */
     if (argc != 2) {
@@ -92,6 +223,14 @@ int main(int argc, char** argv)
       fprintf(stderr, "Failed to register PKCS#11 token\n");
       return ret;
     }
+
+#ifdef RPI_CBA
+     ret = CBAEnroll();
+     if (ret !=0 ) {
+       fprintf(stderr, "Failed to enroll context for Context-Based Authentication\n");
+       return ret;
+     }
+#endif /* ifdef RPI_CBA */
 
     /* Create a socket that uses an internet IPv4 address,
      * Sets the socket to be stream based (TCP),
@@ -219,6 +358,60 @@ int main(int argc, char** argv)
     cipher = wolfSSL_get_current_cipher(ssl);
     printf("SSL cipher suite is %s\n", wolfSSL_CIPHER_get_name(cipher));
 
+#ifdef RPI_CBA
+    memset(CBANonce, 0, (size_t)CBA_NONCE_SIZE);
+    memset(CBASignature, 0, (size_t)CBA_SIGNATURE_BUFFER_SIZE);
+
+    if (initFunc(&CBARequest, 0, CBANoncePatternSize)) {
+      fprintf(stderr, "ERROR: initFunc for CBARequest failed!\n");
+      goto exit;
+    }
+    memcpy(CBARequest.data_p[0].data, CBANonce, (size_t)CBARequest.data_p[0].len);
+
+    if (initFunc(&CBAResponce, 0, CBASignaturePatternSize)) {
+      fprintf(stderr, "ERROR: initFunc for CBAResponse failed!\n");
+      goto exit;
+    }
+    memcpy(CBAResponce.data_p[0].data, CBASignature, (size_t)CBAResponce.data_p[0].len);
+
+    LOCAL_LOG_DBG("Attempting to receive challenge!");
+
+    if (recChallenge(ssl, &CBARequest)) {
+      fprintf(stderr, "ERROR: recChallenge() failed!\n");
+      goto exit;
+    }
+
+    memcpy(CBANonce, CBARequest.data_p[0].data, (size_t)CBANoncePatternSize[0]);
+
+    LOCAL_LOG_DBG("Attempting CBAProve!");
+
+    if (CBAProve(CBANonce, CBANonceSize, CBASignature, CBASignatureBufferSize, &CBASignatureSize)) {
+      fprintf(stderr, "CBAProve() failed!\n");
+      LOCAL_LOG_DBG("Mocking up the signature!");
+      memset(CBASignature, 1, CBA_SIGNATURE_BUFFER_SIZE / 8);
+      CBASignatureSize = CBA_SIGNATURE_BUFFER_SIZE / 8;
+    }
+
+    if (CBASignatureSize >= CBASignaturePatternSize[0]) {
+      fprintf(stderr, "EROOR: The CBA signature is bigger than allocated communication buffer!\n");
+      goto exit;
+    }
+
+    LOCAL_LOG_DBG("Signature size is: %d", CBASignatureSize);
+    LOCAL_LOG_DBG("Message buffer size is: %d", CBAResponce.data_p[0].len);
+
+    memcpy(CBAResponce.data_p[0].data, CBASignature, CBASignatureSize);
+    memset(CBAResponce.data_p[0].data + CBASignatureSize, '\0', sizeof(char));
+
+    LOCAL_LOG_HEXDUMP_DBG(CBAResponce.data_p[0].data, CBAResponce.data_p[0].len, "Signature:");
+    LOCAL_LOG_DBG("Attempting to send response!");
+
+    if (sendResponse(ssl, &CBAResponce)) {
+      fprintf(stderr, "ERROR: sendResponce() failed!\n");
+      goto exit;
+    }
+#endif /* RPI_CBA */
+
     /* Get a message for the server from stdin */
     printf("Message for server: ");
     memset(buff, 0, sizeof(buff));
@@ -262,6 +455,12 @@ int main(int argc, char** argv)
     wc_Pkcs11Token_Close(&token);
     wc_Pkcs11Token_Final(&token);
     wc_Pkcs11_Finalize(&dev);
+
+exit:
+#ifdef RPI_CBA
+    freeFunc(&CBARequest);
+    freeFunc(&CBAResponce);
+#endif
 
 cleanup:
   wolfSSL_free(ssl); /* Free the wolfSSL object                  */

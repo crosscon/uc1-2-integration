@@ -115,13 +115,17 @@ int recStream(WOLFSSL* ssl, uint8_t* out_buf, uint8_t payload_len) {
 
       continue;
     }
-    if (ret == 0)
+    if (ret == 0) {
+       LOCAL_LOG_DBG("Wolfssl read failed!");
       return 1;
+    }
 
     err = wolfSSL_get_error(ssl, ret);
 
-    if (err != WOLFSSL_ERROR_WANT_READ)
+    if (err != WOLFSSL_ERROR_WANT_READ) {
+      LOCAL_LOG_DBG("Wolfssl read failed! No \"want_read!\"");
       return 1;
+    }
   }
 
   LOCAL_LOG_DBG("Callin readExact() on out_buf");

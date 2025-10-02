@@ -8,11 +8,22 @@
 #define ID_LEN  4 // uint32_t
 #define LEN32   32
 #define LEN64   64
+#ifndef RPI_CBA
 #define DATA_PORTIONS 4
+#endif
+#ifdef RPI_CBA
+#define DATA_PORTIONS 1
+#define CBA_MESSAGE_SIZE 128
+#define CBA_SIGNATURE_BUFFER_SIZE 512
+#define CBA_NONCE_SIZE 16
+#endif
 
 #define PUF_TA_INIT_FUNC_ID           ((uint32_t)0x00112233)
 #define PUF_TA_GET_COMMITMENT_FUNC_ID ((uint32_t)0x11223344)
 #define PUF_TA_GET_ZK_PROOFS_FUNC_ID  ((uint32_t)0x22334455)
+
+/* The value for this definition does not matter actually. */
+#define CBA_PROVE_IDENTITY            ((uint32_t)0x02030405)
 
 typedef uint32_t func_t;
 

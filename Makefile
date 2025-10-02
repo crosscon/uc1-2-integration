@@ -1,9 +1,9 @@
 # TLS Examples Makefile
-CC					?= $(CROSS_COMPILE)gcc
+CC              ?= $(CROSS_COMPILE)gcc
 WOLFSSL_INSTALL_DIR ?= /usr/local
-CFLAGS				+= -Wall -I$(WOLFSSL_INSTALL_DIR)/include -I$(LIBTEEC_INSTALL_DIR)/include
-LIBS				+= -L$(WOLFSSL_INSTALL_DIR)/lib -L$(LIBTEEC_INSTALL_DIR)/lib -lm
-LDFLAGS				+= -Wl,--hash-style=gnu
+CFLAGS          += -Wall -I$(WOLFSSL_INSTALL_DIR)/include -I$(LIBTEEC_INSTALL_DIR)/include
+LIBS            += -L$(WOLFSSL_INSTALL_DIR)/lib -L$(LIBTEEC_INSTALL_DIR)/lib -lm
+LDFLAGS         += -Wl,--hash-style=gnu
 
 # option variables
 DYN_LIB         = -lwolfssl -lteec

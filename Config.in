@@ -12,9 +12,16 @@ config BR2_PACKAGE_MTLS_DEBUG
     default n
 
 config BR2_PACKAGE_MTLS_NXP_PUF
-    bool "Build for NXP demo"
+    bool "Build for NXP demo (UC1.1)"
     depends on BR2_PACKAGE_MTLS
     default n
     help
-      Compiles mtls server with PUF auth support for NXP demo.
+      Compiles mtls server with PUF auth support for NXP demo (UC1.1).
+
+config BR2_PACKAGE_MTLS_RPI_CBA
+    bool "Build for RPI demo (UC1.2)"
+    depends on BR2_PACKAGE_MTLS
+    default n
+    help
+      Compiles mtls server and client with CBA support for RPi demo (UC1.2).
 

@@ -22,3 +22,14 @@ export PI_SERVER_SLOT=$(grep '#define *SLOT_ID' server-tls.c | awk '{ print $3 }
 export PI_CLIENT="$PI_USER@$PI_CLIENT_HOST"
 export PI_CLIENT_PREFIX=$(grep '#define *PREFIX' client-tls.c | cut -d'"' -f2)
 export PI_CLIENT_SLOT=$(grep '#define *SLOT_ID' client-tls.c | awk '{ print $3 }')
+
+export BUILDROOT_CONFIG_LOCAL_PATH="$LOCAL_PROJECT_DIR/buildroot/config/crosscon-buildroot.config"
+export BUILDROOT_CONFIG_TARGET_PATH="$CROSSCON_REPO_PATH/buildroot/build-aarch64/.config"
+
+export WOLFSSL_CONFIG_LOCAL_PATH="$LOCAL_PROJECT_DIR/buildroot/config/wolfssl.mk"
+export WOLFSSL_CONFIG_TARGET_PATH="$CROSSCON_REPO_PATH/buildroot/package/wolfssl/wolfssl.mk"
+
+export OPENSC_CONFIG_LOCAL_PATH="$LOCAL_PROJECT_DIR/buildroot/config/opensc.mk"
+export OPENSC_CONFIG_TARGET_PATH="$CROSSCON_REPO_PATH/buildroot/package/opensc/opensc.mk"
+
+export DEMOS_CONTAINER_SCRIPT="./rpi4-ws/run.sh"

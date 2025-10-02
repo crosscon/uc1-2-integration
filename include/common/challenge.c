@@ -76,12 +76,22 @@ void freeFunc(func_call_t* call) {
 /* Send / Receive Challenges */
 
 int sendFramedStream(WOLFSSL* ssl, const uint8_t* data, uint8_t len) {
-  if (wolfSSL_write(ssl, START_SEQ, START_SEQ_LEN) != START_SEQ_LEN)
+  LOCAL_LOG_DBG("sendFramedStream: data: %s", data ? "OK" : "FAIL");
+  LOCAL_LOG_DBG("sendFramedStream: len: %d", len);
+
+  if (wolfSSL_write(ssl, START_SEQ, START_SEQ_LEN) != START_SEQ_LEN) {
+    LOCAL_LOG_DBG("Start sequence write failed!");
     return 1;
-  if (wolfSSL_write(ssl, data, len) != (int)len)
+  }
+
+  if (wolfSSL_write(ssl, data, len) != (int)len) {
+    LOCAL_LOG_DBG("Data write failed, len was: %d!", len);
     return 1;
-  if (wolfSSL_write(ssl, STOP_SEQ, STOP_SEQ_LEN) != STOP_SEQ_LEN)
+  }
+  if (wolfSSL_write(ssl, STOP_SEQ, STOP_SEQ_LEN) != STOP_SEQ_LEN) {
+    LOCAL_LOG_DBG("Stop sequence write failed!");
     return 1;
+  }
   return 0;
 }
 

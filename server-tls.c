@@ -36,14 +36,16 @@
 #include <wolfssl/ssl.h>
 #include <wolfssl/wolfcrypt/wc_pkcs11.h>
 
-/* teec */
-#include <tee_client_api.h>
-
 #include "include/common/log.h"
 #ifdef NXP_PUF
   #include "include/common/challenge.h"
   #include "include/local_challenge.h"
   #include "include/puf_verifier.h"
+#endif
+#ifdef RPI_CBA
+  #include <tee_client_api.h>
+  #include "include/context_based_authentication.h"
+  #include "include/common/challenge.h"
 #endif
 
 #define DEFAULT_PORT 12345
@@ -54,6 +56,124 @@
 #define KEY_FILE    "/root/" PREFIX "-key.pem"
 #define SLOT_ID 0
 #define PRIV_KEY_ID  {0x01}
+
+
+#ifdef RPI_CBA
+TEEC_Result CBAGenerateNonce(char* nonce, size_t nonce_size) {
+    TEEC_Result res;
+    TEEC_Context ctx;
+    TEEC_Session sess;
+    TEEC_Operation op;
+    TEEC_UUID uuid = TA_CONTEXT_BASED_AUTHENTICATION_UUID;
+    uint32_t err_origin;
+
+    printf("Generating a nonce...\n");
+
+    res = TEEC_InitializeContext(NULL, &ctx);
+    if (res != TEEC_SUCCESS) {
+      printf("TEEC_InitializeContext failed with code 0x%x", res);
+      return res;
+    }
+
+    res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
+    if (res != TEEC_SUCCESS) {
+      fprintf(stderr, "TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+      return res;
+    }
+
+    memset(&op, 0, sizeof(op));
+
+    op.paramTypes = TEEC_PARAM_TYPES(
+      TEEC_MEMREF_TEMP_OUTPUT,
+      TEEC_NONE,
+      TEEC_NONE,
+      TEEC_NONE
+    );
+
+    op.params[0].tmpref.buffer = nonce;
+    op.params[0].tmpref.size = nonce_size;
+
+    res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_GET_NONCE, &op, &err_origin);
+    if (res != TEEC_SUCCESS) {
+      fprintf(stderr, "TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+      return res;
+    }
+
+    printf("TA result: %x %x ... %x\n", nonce[0], nonce[1], nonce[15]);
+
+    TEEC_CloseSession(&sess);
+    TEEC_FinalizeContext(&ctx);
+
+    return TEEC_SUCCESS;
+}
+
+TEEC_Result CBAVerifySignature(char* nonce, size_t nonce_size, char* signature, size_t signature_size) {
+    TEEC_Result res;
+    TEEC_Context ctx;
+    TEEC_Session sess;
+    TEEC_Operation op;
+    TEEC_UUID uuid = TA_CONTEXT_BASED_AUTHENTICATION_UUID;
+    uint32_t err_origin;
+
+    printf("Verifying a signature...\n");
+
+    res = TEEC_InitializeContext(NULL, &ctx);
+    if (res != TEEC_SUCCESS) {
+      fprintf(stderr, "TEEC_InitializeContext failed with code 0x%x", res);
+      return res;
+    }
+
+    res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC, NULL, NULL, &err_origin);
+    if (res != TEEC_SUCCESS) {
+      fprintf(stderr, "TEEC_Opensession failed with code 0x%x origin 0x%x", res, err_origin);
+      return res;
+    }
+
+    memset(&op, 0, sizeof(op));
+
+    op.paramTypes = TEEC_PARAM_TYPES(
+      TEEC_MEMREF_TEMP_INPUT,
+      TEEC_MEMREF_TEMP_INPUT,
+      TEEC_NONE,
+      TEEC_NONE
+    );
+
+    op.params[0].tmpref.buffer = nonce;
+    op.params[0].tmpref.size = nonce_size;
+    op.params[1].tmpref.buffer = signature;
+    op.params[1].tmpref.size = signature_size;
+
+    LOCAL_LOG_HEXDUMP_DBG(op.params[0].tmpref.buffer, op.params[0].tmpref.size, "Nonce data:");
+    LOCAL_LOG_HEXDUMP_DBG(op.params[1].tmpref.buffer, op.params[1].tmpref.size, "Signature data:");
+
+    res = TEEC_InvokeCommand(&sess, TA_CONTEXT_BASED_AUTHENTICATION_CMD_VERIFY, &op, &err_origin);
+    if (res != TEEC_SUCCESS) {
+      fprintf(stderr, "TEEC_InvokeCommand failed with code 0x%x, origin 0x%x", res, err_origin);
+      return res;
+    }
+
+    printf("TA result: Ok\n");
+
+    TEEC_CloseSession(&sess);
+    TEEC_FinalizeContext(&ctx);
+
+    return TEEC_SUCCESS;
+}
+
+// Get content size assuming unused space is zeros
+size_t get_real_size(const unsigned char *data, size_t len) {
+    if (!data || len == 0) return 0;
+
+    size_t i = len;
+    while (i > 0) {
+        if (data[i - 1] != 0) {
+            return i;
+        }
+        i--;
+    }
+    return 0; // all zeros
+}
+#endif /* RPI_CBA */
 
 int main()
 {
@@ -69,7 +189,11 @@ int main()
     const char*        reply = "Hello from WolfSSL TLS server!\n";
     char               wolfsslErrorStr[80];
 
+#ifdef RPI_CBA
+    const char* library = "/usr/lib/libckteec2.so";
+#else
     const char* library = "/usr/lib/libckteec.so";
+#endif /* ifdef RPI_CBA */
     const char* tokenName = "ServerToken";
     const char* userPin = "1234";
     Pkcs11Dev dev;
@@ -89,6 +213,17 @@ int main()
     func_call_t commCh;
     func_call_t proofsCh;
     data_portion_t nonceP;
+#endif
+
+#ifdef RPI_CBA
+    char CBANonce[CBA_NONCE_SIZE];
+    char CBASignature[CBA_SIGNATURE_BUFFER_SIZE];
+    size_t CBASignatureSize = 0;
+
+    func_call_t CBARequest, CBAResponce;
+    /* Are needed for initFunc(). */
+    const uint8_t CBASignaturePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_MESSAGE_SIZE};
+    const uint8_t CBANoncePatternSize[DATA_PORTIONS] = {(uint8_t)CBA_NONCE_SIZE};
 #endif
 
 #ifndef NXP_PUF
@@ -311,6 +446,67 @@ int main()
         }
 #endif /* NXP_PUF */
 
+#ifdef RPI_CBA
+        memset(CBANonce, 0, (size_t)CBA_NONCE_SIZE);
+        memset(CBASignature, 0, (size_t)CBA_SIGNATURE_BUFFER_SIZE);
+
+        // Generate CBA nonce:
+        if (CBAGenerateNonce(CBANonce, (size_t)CBA_NONCE_SIZE)) {
+          fprintf(stderr, "ERROR: CBAGenerateNonce() failed!\n");
+          goto exit;
+        }
+
+        if (initFunc(&CBARequest, CBA_PROVE_IDENTITY, CBANoncePatternSize)) {
+          fprintf(stderr, "initFunc for CBAResponce failed!\n");
+          goto exit;
+        }
+        memcpy(CBARequest.data_p[0].data, CBANonce, (size_t)CBARequest.data_p[0].len);
+
+        if (initFunc(&CBAResponce, 0, CBASignaturePatternSize)) {
+          fprintf(stderr, "initFunc for CBAResponce failed!\n");
+          goto exit;
+        }
+        memset(CBAResponce.data_p[0].data, 0, (size_t)CBAResponce.data_p[0].len);
+
+        if (sendChallenge(ssl, &CBARequest)) {
+          fprintf(stderr, "ERROR: sendChallenge() failed!\n");
+          goto exit;
+        }
+
+        LOCAL_LOG_DBG("CBARequest send!");
+
+        if (recResponse(ssl, &CBAResponce)) {
+          fprintf(stderr, "ERROR: recResponse() failed!\n");
+          goto exit;
+        }
+
+        LOCAL_LOG_DBG("CBAResponse received!");
+        LOCAL_LOG_DBG("First data portion size: %d", CBAResponce.data_p[0].len);
+        LOCAL_LOG_HEXDUMP_DBG(CBAResponce.data_p[0].data, CBAResponce.data_p[0].len, "Received:");
+
+        // Will break if last byte supposed to be zero
+        CBASignatureSize = get_real_size(
+            (const unsigned char *)CBAResponce.data_p[0].data,
+            CBAResponce.data_p[0].len
+        );
+        if (CBASignatureSize == 0 || CBASignatureSize > CBAResponce.data_p[0].len) {
+          fprintf(stderr, "ERROR: wrong Context-Based Authentication signature size!\n");
+          goto exit;
+        }
+
+        LOCAL_LOG_DBG("Signature size size is %d", CBASignatureSize);
+
+        memcpy(CBASignature, CBAResponce.data_p[0].data, CBASignatureSize);
+
+        if (CBAVerifySignature(CBANonce, CBA_NONCE_SIZE, CBASignature, CBASignatureSize)) {
+          fprintf(stderr, "ERROR: CBAVerifySignature() failed!\n");
+          goto exit;
+        }
+
+#endif /* RPI_CBA */
+
+        fprintf(stdout, "Authentication succeeded!\n");
+
         /* Read the client data into our buff array */
         memset(buff, 0, sizeof(buff));
         ret = wolfSSL_read(ssl, buff, sizeof(buff) - 1);
@@ -362,6 +558,11 @@ exit:
     freeFunc(&commCh);
     freeFunc(&proofsCh);
     free(nonceP.data);
+#endif
+
+#ifdef RPI_CBA
+    freeFunc(&CBARequest);
+    freeFunc(&CBAResponce);
 #endif
     /* Cleanup and return */
     if (ssl)
