@@ -61,37 +61,32 @@ Settings overview:
 configuration, depending which demo is targeted. A full list with descriptions
 can be found in "[available demos](#available-demos)" section.
 * `SINGLE_TARGET` [true / false] - This setting is used to define if the keys
-and binaries should be deployed on two or a single target. For "two RPI" demo,
-this setting shall be set to `false`. For development purposes (to run server and
-client on a single machine), or for running a client on LPC55S69 the setting
-shall be set to `true`.
+and binaries should be deployed on two or a single target. For `TWO_RPI` and
+`RPI_CBA` demos, this setting shall be set to `false`. For development purposes
+(to run server and client on a single machine), or for running a client on
+LPC55S69 the setting shall be set to `true`.
 * `PI_SERVER_HOST` [ip addr] - An ip address of server target. In a
   `SINGLE_TARGET` mode, all certificates and binaries are deployed to server.
 * `PI_CLIENT_HOST` [ip addr] - An ip address of client target. Unused in
   `SINGLE_TARGET` mode.
 * `CROSSCON_REPO_PATH` [path] - A path to local
-  [crosscon-demos](https://github.com/3mdeb/CROSSCON-Hypervisor-and-TEE-Isolation-Demos/)
+  [crosscon-demos](https://github.com/crosscon/crosscon-demos-uc12)
   repository. It is a built system for RPI that will be used in the process.
-* `UC1_INTEGRATION_PATH` [path] - A path to local
-  [uc1-integration](https://github.com/crosscon/uc1-integration/tree/main)
-  repository. It is a built system for LPC55S69. Both solutions (for each
-  target) use common codebase (`./include/common`). This path will allow for
-  syncing sources.
 
 How and when to fill up these setting is explained later in this readme.
 
 ## Building
 
 For RPIs, a custom, `buildroot` based Linux OS is being built as a part of the
-[Crosscon demos](https://github.com/3mdeb/CROSSCON-Hypervisor-and-TEE-Isolation-Demos/).
+[Crosscon demos](https://github.com/crosscon/crosscon-demos-uc12).
 The resulting linux image is then run under the Crosscon hypervisor. This
 section aims to explain how to use said build system to build this solution.
 
 ### Prerequisites
 
 First
-[build and run default Crosscon demos configuration for RPI](https://github.com/3mdeb/CROSSCON-Hypervisor-and-TEE-Isolation-Demos/blob/master/rpi4-ws/README.md). You
-can skip flashing and running the hypervisor image. The aim is to know the
+[build and run default Crosscon demos configuration for RPI](https://github.com/crosscon/crosscon-demos-uc12/blob/master/rpi4-ws/README.md).
+You can skip flashing and running the hypervisor image. The aim is to know the
 build-system is working.
 
 ### Building the image
@@ -106,7 +101,7 @@ Decide which [demo](#available-demos) you want to build, and set up
 #### Sync buildroot
 
 Update `CROSSCON_REPO_PATH` in `scripts/settings.sh` with the path to the local
-`CROSSCON-Hypervisor-and-TEE-Isolation-Demos` repository.
+`crosscon-demos-uc12` repository.
 
 Next, execute `buildroot: sync` vs-code task, or
 `scripts/buildroot_sync_src.sh`. The script does the following:
@@ -124,14 +119,30 @@ automatically when saving.
 To build the "OS" with the applications embedded in the system, run the bellow
 commands depending which demo you're running.
 
+_Note: The commands from this section shall be run inside
+[crosscon-demos](#prerequisites) repository._
+
 **For `TWO_RPI` and `NXP_PUF`**:
 
 ```bash
 # Run the following inside the container
-rpi4-ws/build_rpi4.sh --all --local-confs
+rpi4-ws/build.sh --all --local-confs
 ```
 
 **FOR `RPI_CBA`:**
+
+For `RPI_CBA` demo, the source code of TA must be modified. The following
+settings need to be changed:
+* IP address of the AI server. Most likely this is IP address of your
+development machine, as for the demo we'll be running the AI server from there.
+* Wi-Fi channels.
+
+You need to update IP address and Wi-Fi settings for `cba_ta`, as described in
+step 4 in
+"[Building RPI image](https://github.com/crosscon/uc1-integration/tree/main/cba#building-rpi-image)"
+section.
+
+Once you've changed the configuration, proceed to building:
 
 ```bash
 ./rpi4-ws/build.sh --all --local-confs --dts=./rpi4-ws/rpi4-host-linux.dts
@@ -210,7 +221,7 @@ Boot the image by manually loading it into the memory and "jumping" to it.
 fatload mmc 0 0x200000 crossconhyp.bin; go 0x200000
 ```
 
-_Note: If building for two RPIs, repeat this step for second RPI._
+_Note: If building for `TWO_RPI` or `RPI_CBA`, repeat this step for second RPI._
 
 #### Generating key pairs
 
@@ -267,7 +278,8 @@ generate certificates for NXP platform, use `scripts/gen_and_convert_certs.sh`
 script, **although you shouldn't have to do that**. The ones embedded into
 the current sources should be valid.
 
-To generate keys and certificates execute `buildroot: setup target` vscode task. Depending on `SINGLE_TARGET` settings, the task will create and deploy all
+To generate keys and certificates execute `buildroot: setup target` vscode task.
+Depending on `SINGLE_TARGET` settings, the task will create and deploy all
 necessary files either on one or two RPIs. It'll also set up a proper date on
 the targets, to avoid issues with certificate expiration. If you cannot execute
 the task, you can fall back to executing the scripts manually.
@@ -284,7 +296,7 @@ deploying binaries, you don't have to regenerate the certificates each time._
 
 The vscode task `buildroot: do all` has been set up. It rebuilds necessary
 binaries, transfers them to targets, and sets up certificates. This method
-can be used once, the solution has been built and deployed manually at least
+can be used once the solution has been built and deployed manually at least
 once.
 
 If not using vs-code, same result can be achieved running the following:
@@ -299,7 +311,7 @@ scripts/buildroot_ta_cert_gen.sh
 ## Run `TWO_RPI` demo (dual or single target)
 
 _Note: Due to a
-[known bug which causes serial connection to drop](https://github.com/crosscon/CROSSCON-Hypervisor-and-TEE-Isolation-Demos/issues/46),
+[known bug which causes serial connection to drop](https://github.com/crosscon/crosscon-demos-uc12/issues/46),
 it's advised to perform the following commands via ssh shell._
 
 Run the server binary.
@@ -353,10 +365,13 @@ known issue, which does not affect the process.
 ## Run `RPI_CBA` demo
 
 To run `RPI_CBA` demo it is necessary to set up an AI server on development
-machine. To do so, you need to update IP address and wifi settings for `cba_ta`,
+machine. To do so, you need to update IP address and Wi-Fi settings for `cba_ta`,
 as described in step 4 in
-"[Building RPI image](https://github.com/crosscon/uc1-integration/tree/main/cba#building-rpi-image)" section and rebuild the solution once again. Then set
-up and deploy the AI server according to
+"[Building RPI image](https://github.com/crosscon/uc1-integration/tree/main/cba#building-rpi-image)".
+Do so if you haven't done so during "[building and deploying manually](#building-and-deploying-manually)"
+section and rebuild the solution once again.
+
+Then set up and deploy the AI server according to
 "[Building remote server](https://github.com/crosscon/uc1-integration/tree/main/cba#building-remote-server)"
 section.
 
@@ -403,39 +418,17 @@ default, as it must gather CSI data two times.
 ## Running `NXP_PUF` demo
 Here's how to run the demo for NXP platform.
 
-### Update the path to uc1-integration and perform sync
-
-To build the solution for NXP you'll need to sync common codebase with build
-system for NXP platform. Update `UC1_INTEGRATION_PATH` in `scripts/settings.sh`
-with the path to the local
-[uc1-integration](https://github.com/crosscon/uc1-integration) repository.
-
-```bash
-export UC1_INTEGRATION_PATH=<path>
-```
-
-Then sync the common code base by running `nxp: sync common` vs-code task.
-You can fall back to executing the `scripts/nxp_sync_common.sh` script manually.
-
-```bash
-scripts/nxp_sync_common.sh
-```
-
-If the task/script succeed you should be set to start building the client for
-LPC55S69.
-
 ### Rebuild and deploy binaries
 
 If you haven't already, set `SINGLE_TARGET` mode to true.
 
-Rebuild and deploy the solution. If you previously built for dual RPIs,
+Rebuild and deploy the solution. If you previously built other demos,
 re-flashed or rebooted the image, make sure to deploy certificates too.
 
 ### Run the application
 
 Run the server application, and once the NXP solution has been built, attempt to
 connect to the running server.
-
 
 ## MISC
 

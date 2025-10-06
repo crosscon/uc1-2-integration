@@ -73,6 +73,11 @@ echo "# Checking Config.in..."
 update_config_in
 
 echo "# Copying app sources..."
-rsync -avz --delete "$LOCAL_PROJECT_DIR/." "$CROSSCON_REPO_PATH/buildroot/package/mtls"
+rsync -az --delete "$LOCAL_PROJECT_DIR/." "$CROSSCON_REPO_PATH/buildroot/package/mtls"
+
+echo "# Marking mtls to be rebuilt..."
+cd $CROSSCON_REPO_PATH
+"$DEMOS_CONTAINER_SCRIPT" bash -c "cd buildroot && make mtls-dirclean O=build-aarch64/"
+cd -
 
 echo "# Done!"

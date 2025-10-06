@@ -13,7 +13,7 @@ gen_csr_and_cert() {
 
   echo "# Generating ${prefix} CSR"
   ssh "$target" sh -i<<EOF
-export PKCS11_MODULE_PATH=/usr/lib/libckteec2.so
+export PKCS11_MODULE_PATH=${LIBTEEC_LIB}
 openssl req -engine pkcs11 -keyform engine \
 -key "pkcs11:token=${prefix_c}Token;object=${prefix_c}Key;type=private;pin-value=1234" \
 -new -config ~/cert.conf -out ~/${prefix}-csr.pem
