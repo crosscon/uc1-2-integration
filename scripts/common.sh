@@ -33,3 +33,9 @@ export OPENSC_CONFIG_LOCAL_PATH="$LOCAL_PROJECT_DIR/buildroot/config/opensc.mk"
 export OPENSC_CONFIG_TARGET_PATH="$CROSSCON_REPO_PATH/buildroot/package/opensc/opensc.mk"
 
 export DEMOS_CONTAINER_SCRIPT="./rpi4-ws/run.sh"
+
+if [ "$DEMO" = "RPI_CBA" ]; then
+    export LIBTEEC_LIB="/usr/lib/libckteec2.so"
+else
+    export LIBTEEC_LIB="/usr/lib/libckteec.so"
+fi
